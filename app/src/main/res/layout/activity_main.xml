@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mainLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0B10"
+    android:padding="24dp">
+
+    <ImageView
+        android:id="@+id/imgStatus"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="80dp"
+        android:src="@android:drawable/ic_lock_lock"
+        android:contentDescription="Status Icon"
+        app:tint="#FF5252" />
+
+    <TextView
+        android:id="@+id/txtStatusMain"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/imgStatus"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:text="النظام غير محمي"
+        android:textColor="#FF5252"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/txtDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/txtStatusMain"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:text="تنبيه: واتساب لن يعمل بدون تشغيل الوكيل ⚠️"
+        android:textColor="#BBBBBB"
+        android:textSize="14sp" />
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/btnStart"
+        android:layout_marginBottom="40dp"
+        app:cardBackgroundColor="#151821"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="25dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="محاولات حظر تم إحباطها"
+                    android:textColor="#888888"
+                    android:textSize="12sp" />
+                <TextView
+                    android:id="@+id/txtBlockedCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="0"
+                    android:textColor="#4CAF50"
+                    android:textSize="36sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_gravity="center"
+                android:src="@android:drawable/ic_menu_shield"
+                app:tint="#4CAF50" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <Button
+        android:id="@+id/btnStart"
+        android:layout_width="match_parent"
+        android:layout_height="65dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="20dp"
+        android:backgroundTint="#FF5252"
+        android:text="تفعيل درع الحماية"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:cornerRadius="15dp" />
+
+</RelativeLayout>
