@@ -9,9 +9,9 @@ import java.util.regex.Pattern;
 
 public class LocalProxyServer extends Thread {
     private int port;
-    private boolean isRunning = true;
+    private volatile boolean isRunning = true;
     private MainActivity activity;
-    private static final String TAG = "LocalProxyServer";
+    private static final String TAG = "ShieldProxy";
 
     public LocalProxyServer(int port, MainActivity activity) {
         this.port = port;
@@ -20,20 +20,22 @@ public class LocalProxyServer extends Thread {
 
     @Override
     public void run() {
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            Log.d(TAG, "🚀 سيرفر الدرع النشط يعمل الآن على المنفذ: " + port);
+        // استخدام 0.0.0.0 للسماح بالاتصال من كافة واجهات الجهاز
+        try (ServerSocket serverSocket = new ServerSocket(port, 50, InetAddress.getByName("0.0.0.0"))) {
+            Log.d(TAG, "🛡️ السيرفر نشط ومستقر على المنفذ: " + port);
             
             while (isRunning) {
                 try {
                     Socket clientSocket = serverSocket.accept();
                     configureSocket(clientSocket);
+                    // معالجة كل اتصال في Thread مستقل لضمان عدم توقف الدردشة
                     new Thread(() -> handleClient(clientSocket)).start();
                 } catch (IOException e) {
-                    if (isRunning) Log.e(TAG, "خطأ في استقبال الاتصال: " + e.getMessage());
+                    if (isRunning) Log.e(TAG, "خطأ في استقبال الطلب: " + e.getMessage());
                 }
             }
         } catch (IOException e) {
-            Log.e(TAG, "❌ فشل فتح المنفذ " + port + ". قد يكون محجوزاً من قِبل النظام.");
+            Log.e(TAG, "❌ خطأ فادح: تعذر فتح المنفذ " + port);
         }
     }
 
@@ -43,10 +45,14 @@ public class LocalProxyServer extends Thread {
             InputStream inFromClient = clientSocket.getInputStream();
             OutputStream outToClient = clientSocket.getOutputStream();
             
-            byte[] buffer = new byte[8192];
+            // قراءة رأس الطلب (Header)
+            byte[] buffer = new byte[16384]; // زيادة حجم القراءة الأولية
             int bytesRead = inFromClient.read(buffer);
             
-            if (bytesRead <= 0) return;
+            if (bytesRead <= 0) {
+                closeQuietly(clientSocket);
+                return;
+            }
 
             String request = new String(buffer, 0, bytesRead);
             String targetHost = extractHost(request);
@@ -56,41 +62,38 @@ public class LocalProxyServer extends Thread {
                 return;
             }
 
-            // --- فحص الحجب قبل البدء ---
+            // فحص روابط التتبع والحظر
             if (isSecurityReportServer(targetHost)) {
-                Log.w(TAG, "🚫 محجوب: " + targetHost);
+                Log.w(TAG, "🚫 تم صد محاولة تتبع: " + targetHost);
                 if (activity != null) activity.incrementBlockedCount();
                 closeQuietly(clientSocket);
                 return;
             }
 
-            // --- الخطوة الحاسمة: الرد على واتساب لفك تعليق "جاري الاتصال" ---
-            boolean isConnectRequest = request.startsWith("CONNECT");
-            
-            // فتح الاتصال بالسيرفر الحقيقي (WhatsApp)
-            serverSocket = new Socket(targetHost, 443);
+            // فتح اتصال مع سيرفرات واتساب الحقيقية
+            serverSocket = new Socket();
             configureSocket(serverSocket);
+            serverSocket.connect(new InetSocketAddress(targetHost, 443), 10000); // مهلة اتصال 10 ثواني
 
-            if (isConnectRequest) {
-                // إرسال تأكيد الاتصال للعميل (واتساب/المتصفح)
+            // الرد على واتساب لفك تعليق "جاري الاتصال"
+            if (request.startsWith("CONNECT")) {
                 outToClient.write("HTTP/1.1 200 Connection Established\r\n\r\n".getBytes());
                 outToClient.flush();
             } else {
-                // إذا كان طلباً عادياً (HTTP)، نمرره للسيرفر
-                OutputStream outToServer = serverSocket.getOutputStream();
-                outToServer.write(buffer, 0, bytesRead);
-                outToServer.flush();
+                // تمرير البيانات إذا لم يكن طلب CONNECT (نادر في واتساب)
+                serverSocket.getOutputStream().write(buffer, 0, bytesRead);
             }
 
-            Log.d(TAG, "📡 قناة مفتوحة: " + targetHost);
-
-            // إنشاء الجسر الثنائي لنقل البيانات المشفرة
+            // الجسر الثنائي لنقل البيانات المشفرة (الدردشة والوسائط)
             final Socket finalServerSocket = serverSocket;
-            new Thread(() -> bridge(clientSocket, finalServerSocket)).start();
-            new Thread(() -> bridge(finalServerSocket, clientSocket)).start();
+            Thread t1 = new Thread(() -> bridge(clientSocket, finalServerSocket));
+            Thread t2 = new Thread(() -> bridge(finalServerSocket, clientSocket));
+            
+            t1.start();
+            t2.start();
 
         } catch (Exception e) {
-            Log.e(TAG, "خطأ في النفق: " + e.getMessage());
+            Log.e(TAG, "⚠️ فشل النفق مع: " + e.getMessage());
             closeQuietly(clientSocket);
             closeQuietly(serverSocket);
         }
@@ -99,28 +102,20 @@ public class LocalProxyServer extends Thread {
     private void configureSocket(Socket socket) throws SocketException {
         if (socket != null) {
             socket.setKeepAlive(true);
-            socket.setTcpNoDelay(true);
-            socket.setSoTimeout(0);
-            socket.setTrafficClass(0x10); 
+            socket.setTcpNoDelay(true); // تقليل التأخير في إرسال الرسائل
+            socket.setSoTimeout(0);     // عدم قطع الاتصال بسبب الخمول
+            socket.setSendBufferSize(65536); // زيادة حجم البفر للإرسال
+            socket.setReceiveBufferSize(65536); // زيادة حجم البفر للاستقبال
         }
     }
 
     private boolean isSecurityReportServer(String host) {
         String hostLower = host.toLowerCase();
         String[] blackList = {
-            "v.whatsapp.net",
-            "integrity.googleapis.com",
-            "developer.android.com",
-            "www.recaptcha.net",
-            "www.gstatic.com/recaptcha",
-            "crashlogs.whatsapp.net",
-            "analytics.whatsapp.net",
-            "telemetry.whatsapp.net",
-            "android.clients.google.com",
-            "graph.facebook.com",
-            "graph.whatsapp.com"
+            "v.whatsapp.net", "integrity.googleapis.com", 
+            "crashlogs.whatsapp.net", "analytics.whatsapp.net", 
+            "telemetry.whatsapp.net", "graph.facebook.com"
         };
-        
         for (String domain : blackList) {
             if (hostLower.contains(domain)) return true;
         }
@@ -133,23 +128,21 @@ public class LocalProxyServer extends Thread {
                     Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
             Matcher matcher = pattern.matcher(request);
             if (matcher.find()) return matcher.group(2);
-        } catch (Exception e) {
-            Log.e(TAG, "فشل استخراج الهوست");
-        }
+        } catch (Exception e) {}
         return null;
     }
 
     private void bridge(Socket from, Socket to) {
         try (InputStream in = from.getInputStream(); 
              OutputStream out = to.getOutputStream()) {
-            byte[] buffer = new byte[32768]; 
+            byte[] buffer = new byte[65536]; // بفر كبير جداً (64KB) لثبات الوسائط
             int n;
             while (isRunning && !from.isClosed() && !to.isClosed() && (n = in.read(buffer)) != -1) {
                 out.write(buffer, 0, n);
                 out.flush();
             }
         } catch (IOException e) {
-            // انقطاع طبيعي
+            // تجاهل أخطاء الانقطاع العادي
         } finally {
             closeQuietly(from);
             closeQuietly(to);
