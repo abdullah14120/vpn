@@ -23,9 +23,8 @@ public class MainActivity extends AppCompatActivity {
     private LocalProxyServer proxyServer;
     private boolean isRunning = false;
     private int blockedCount = 0;
-    private final int PROXY_PORT = 8888; // تغيير المنفذ إلى 8888 احتياطياً
+    private final int PROXY_PORT = 8888; 
 
-    // عناصر الواجهة
     private RelativeLayout mainLayout;
     private TextView txtStatusMain, txtDescription, txtBlockedCount;
     private ImageView imgStatus;
@@ -37,7 +36,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // ربط العناصر البرمجية بالواجهة
         mainLayout = findViewById(R.id.mainLayout);
         txtStatusMain = findViewById(R.id.txtStatusMain);
         txtDescription = findViewById(R.id.txtDescription);
@@ -48,8 +46,6 @@ public class MainActivity extends AppCompatActivity {
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
         createNotificationChannel();
-
-        // تعيين الحالة الافتراضية
         updateUI(false);
 
         btnStart.setOnClickListener(v -> {
@@ -62,7 +58,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startProtection() {
-        // تشغيل السيرفر في Thread منفصل لضمان استقرار التطبيق ومنع ERR_CONNECTION_REFUSED
         new Thread(() -> {
             try {
                 proxyServer = new LocalProxyServer(PROXY_PORT, MainActivity.this);
@@ -128,14 +123,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void showNotification(String title, String content) {
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "shield_channel")
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
-                .setContentTitle(title)
-                .setContentText(content)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true);
-        
         if (manager != null) {
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "shield_channel")
+                    .setSmallIcon(android.R.drawable.ic_lock_lock)
+                    .setContentTitle(title)
+                    .setContentText(content)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setAutoCancel(true);
+            
             manager.notify(1, builder.build());
         }
     }
@@ -153,5 +148,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-}
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
 }
