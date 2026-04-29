@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mainLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -26,10 +25,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
+        android:fontFamily="sans-serif-black"
         android:text="النظام معزول"
         android:textColor="#FF5252"
         android:textSize="28sp"
-        android:fontFamily="sans-serif-black"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/imgStatus" />
@@ -76,20 +75,20 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
                     android:text="تقارير أمنية محبطة"
                     android:textColor="#636366"
-                    android:textSize="13sp"
-                    android:fontFamily="sans-serif-medium" />
+                    android:textSize="13sp" />
 
                 <TextView
                     android:id="@+id/txtBlockedCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-condensed-light"
                     android:text="0"
                     android:textColor="#4CAF50"
                     android:textSize="42sp"
-                    android:fontFamily="sans-serif-condensed-light"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -97,13 +96,13 @@
                 android:id="@+id/iconShield"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
+                android:background="@drawable/bg_circle_green"
+                android:padding="12dp"
                 android:src="@android:drawable/ic_menu_compass"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:tint="#1C1C1E"
-                android:background="@drawable/bg_circle_green"
-                android:padding="12dp"/>
+                app:tint="#1C1C1E" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>
@@ -113,16 +112,17 @@
         android:layout_width="match_parent"
         android:layout_height="70dp"
         android:layout_marginBottom="16dp"
+        android:fontFamily="sans-serif-medium"
         android:insetTop="0dp"
         android:insetBottom="0dp"
         android:text="تفعيل الدرع النشط"
         android:textColor="#FFFFFF"
         android:textSize="18sp"
-        android:fontFamily="sans-serif-medium"
+        android:textStyle="bold"
         app:backgroundTint="#FF5252"
         app:cornerRadius="20dp"
+        app:elevation="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:rippleColor="#40FFFFFF"
-        app:elevation="8dp" />
+        app:rippleColor="#40FFFFFF" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
