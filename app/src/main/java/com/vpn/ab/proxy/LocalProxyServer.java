@@ -10,10 +10,9 @@ import java.util.regex.Pattern;
 public class LocalProxyServer extends Thread {
     private int port;
     private boolean isRunning = true;
-    private MainActivity activity; // الربط مع الواجهة للتفاعل اللحظي
+    private MainActivity activity;
     private static final String TAG = "LocalProxyServer";
 
-    // تحديث الكونستركتور لاستقبال الـ Activity
     public LocalProxyServer(int port, MainActivity activity) {
         this.port = port;
         this.activity = activity;
@@ -22,20 +21,19 @@ public class LocalProxyServer extends Thread {
     @Override
     public void run() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            Log.d(TAG, "🚀 سيرفر الوكيل الآمن يعمل على المنفذ: " + port);
+            Log.d(TAG, "🚀 سيرفر الدرع النشط يعمل الآن على المنفذ: " + port);
             
             while (isRunning) {
                 try {
                     Socket clientSocket = serverSocket.accept();
                     configureSocket(clientSocket);
-                    // تشغيل خيط معالجة لكل اتصال لضمان استقرار الدردشة والقنوات
                     new Thread(() -> handleClient(clientSocket)).start();
                 } catch (IOException e) {
                     if (isRunning) Log.e(TAG, "خطأ في استقبال الاتصال: " + e.getMessage());
                 }
             }
         } catch (IOException e) {
-            Log.e(TAG, "❌ تعذر فتح المنفذ " + port + ". تأكد من عدم وجود تطبيق آخر يستخدمه.");
+            Log.e(TAG, "❌ فشل فتح المنفذ " + port + ". قد يكون محجوزاً من قِبل النظام.");
         }
     }
 
@@ -43,6 +41,8 @@ public class LocalProxyServer extends Thread {
         Socket serverSocket = null;
         try {
             InputStream inFromClient = clientSocket.getInputStream();
+            OutputStream outToClient = clientSocket.getOutputStream();
+            
             byte[] buffer = new byte[8192];
             int bytesRead = inFromClient.read(buffer);
             
@@ -56,65 +56,68 @@ public class LocalProxyServer extends Thread {
                 return;
             }
 
-            // --- نظام الحماية (الحجب الذكي والربط مع الواجهة) ---
+            // --- فحص الحجب قبل البدء ---
             if (isSecurityReportServer(targetHost)) {
-                Log.w(TAG, "🚫 تم حجب محاولة إرسال تقرير أمني إلى: " + targetHost);
-                
-                // تحديث عداد الحجب في الواجهة والتنبيه بالنجاح
-                if (activity != null) {
-                    activity.incrementBlockedCount();
-                }
-                
+                Log.w(TAG, "🚫 محجوب: " + targetHost);
+                if (activity != null) activity.incrementBlockedCount();
                 closeQuietly(clientSocket);
                 return;
             }
 
-            Log.d(TAG, "📡 تمرير بيانات آمنة إلى: " + targetHost);
-
-            // فتح قناة الاتصال بالسيرفر الحقيقي (WhatsApp/Google Media)
+            // --- الخطوة الحاسمة: الرد على واتساب لفك تعليق "جاري الاتصال" ---
+            boolean isConnectRequest = request.startsWith("CONNECT");
+            
+            // فتح الاتصال بالسيرفر الحقيقي (WhatsApp)
             serverSocket = new Socket(targetHost, 443);
             configureSocket(serverSocket);
 
-            OutputStream outToServer = serverSocket.getOutputStream();
-            outToServer.write(buffer, 0, bytesRead);
-            outToServer.flush();
+            if (isConnectRequest) {
+                // إرسال تأكيد الاتصال للعميل (واتساب/المتصفح)
+                outToClient.write("HTTP/1.1 200 Connection Established\r\n\r\n".getBytes());
+                outToClient.flush();
+            } else {
+                // إذا كان طلباً عادياً (HTTP)، نمرره للسيرفر
+                OutputStream outToServer = serverSocket.getOutputStream();
+                outToServer.write(buffer, 0, bytesRead);
+                outToServer.flush();
+            }
 
-            // إنشاء الجسر الثنائي لنقل البيانات الخام (الرسائل، الوسائط، القنوات)
+            Log.d(TAG, "📡 قناة مفتوحة: " + targetHost);
+
+            // إنشاء الجسر الثنائي لنقل البيانات المشفرة
             final Socket finalServerSocket = serverSocket;
             new Thread(() -> bridge(clientSocket, finalServerSocket)).start();
             new Thread(() -> bridge(finalServerSocket, clientSocket)).start();
 
         } catch (Exception e) {
-            Log.e(TAG, "خطأ أثناء معالجة القنوات: " + e.getMessage());
+            Log.e(TAG, "خطأ في النفق: " + e.getMessage());
             closeQuietly(clientSocket);
             closeQuietly(serverSocket);
         }
     }
 
-    // --- إعدادات المقبس (Socket) لضمان عدم انقطاع المكالمات والدردشة ---
     private void configureSocket(Socket socket) throws SocketException {
         if (socket != null) {
-            socket.setKeepAlive(true);    // الحفاظ على الاتصال حياً
-            socket.setTcpNoDelay(true);   // إرسال البيانات فوراً دون تأخير (مهم للرسائل)
-            socket.setSoTimeout(0);       // عدم قطع الاتصال بسبب الخمول (0 يعني للأبد)
-            socket.setTrafficClass(0x10); // تحسين جودة الخدمة (IP_TOS) لسرعة النقل
+            socket.setKeepAlive(true);
+            socket.setTcpNoDelay(true);
+            socket.setSoTimeout(0);
+            socket.setTrafficClass(0x10); 
         }
     }
 
-    // --- القائمة السوداء المحدثة بناءً على تحليلات ملفات الـ DEX ---
     private boolean isSecurityReportServer(String host) {
         String hostLower = host.toLowerCase();
         String[] blackList = {
-            "v.whatsapp.net",           // فحص التوقيع والنسخة
-            "integrity.googleapis.com",  // Play Integrity API
-            "developer.android.com",     // مراجع الأكواد الأمنية
-            "www.recaptcha.net",         // فحص السلوك البشري (Bot)
+            "v.whatsapp.net",
+            "integrity.googleapis.com",
+            "developer.android.com",
+            "www.recaptcha.net",
             "www.gstatic.com/recaptcha",
-            "crashlogs.whatsapp.net",    // سجلات الانهيار
-            "analytics.whatsapp.net",    // التحليلات السلوكية
-            "telemetry.whatsapp.net",    // التقارير عن بعد
-            "android.clients.google.com",// فحص أجهزة الأندرويد
-            "graph.facebook.com",        // تقارير الشركة الأم (ميتا)
+            "crashlogs.whatsapp.net",
+            "analytics.whatsapp.net",
+            "telemetry.whatsapp.net",
+            "android.clients.google.com",
+            "graph.facebook.com",
             "graph.whatsapp.com"
         };
         
@@ -126,13 +129,12 @@ public class LocalProxyServer extends Thread {
 
     private String extractHost(String request) {
         try {
-            // نمط البحث عن الهوست في طلبات الـ HTTP CONNECT والـ Host
             Pattern pattern = Pattern.compile("(^CONNECT |Host: )([^:\r\n\\s]+)", 
                     Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
             Matcher matcher = pattern.matcher(request);
             if (matcher.find()) return matcher.group(2);
         } catch (Exception e) {
-            Log.e(TAG, "فشل استخراج العنوان المستهدف");
+            Log.e(TAG, "فشل استخراج الهوست");
         }
         return null;
     }
@@ -140,14 +142,14 @@ public class LocalProxyServer extends Thread {
     private void bridge(Socket from, Socket to) {
         try (InputStream in = from.getInputStream(); 
              OutputStream out = to.getOutputStream()) {
-            byte[] buffer = new byte[32768]; // زيادة حجم البفر (32KB) لضمان سرعة تحميل الوسائط
+            byte[] buffer = new byte[32768]; 
             int n;
             while (isRunning && !from.isClosed() && !to.isClosed() && (n = in.read(buffer)) != -1) {
                 out.write(buffer, 0, n);
                 out.flush();
             }
         } catch (IOException e) {
-            // انقطاع طبيعي عند إنهاء الجلسة أو فقدان الشبكة
+            // انقطاع طبيعي
         } finally {
             closeQuietly(from);
             closeQuietly(to);
@@ -157,8 +159,6 @@ public class LocalProxyServer extends Thread {
     private void closeQuietly(Socket socket) {
         try {
             if (socket != null && !socket.isClosed()) {
-                socket.shutdownInput();
-                socket.shutdownOutput();
                 socket.close();
             }
         } catch (IOException ignored) {}
