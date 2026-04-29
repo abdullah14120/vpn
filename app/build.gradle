@@ -4,37 +4,65 @@ plugins {
 
 android {
     namespace 'com.vpn.ab'
-    compileSdk 34 // متوافق مع أندرويد 14 لضمان عمل الإشعارات والاهتزاز
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.vpn.ab"
         minSdk 21
         targetSdk 34
         versionCode 1
-        versionName "1.0"
+        versionName "1.0-Shield-Pro"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+        // مهم جداً: لضمان دعم التوقيع المشترك والـ Multi-Process
+        multiDexEnabled true
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            // تفعيل الـ Minify في النسخة النهائية لتقليل حجم التطبيق وحماية الكود
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        debug {
+            minifyEnabled false
+        }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    buildFeatures {
+        // تفعيل ViewBinding إذا أردت استخدامه لاحقاً لتسهيل الربط
+        viewBinding true
+    }
 }
 
 dependencies {
-    // المكتبات الأساسية للواجهات الاحترافية والـ CardView
+    // المكتبات الأساسية لواجهات AndroidX
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.core:core-ktx:1.12.0'
+    
+    // المكتبة الملك لـ Material Design (التي توفر الأزرار والحواف المنحنية)
+    implementation 'com.google.android.material:material:1.11.0'
+    
+    // ConstraintLayout للتحكم الدقيق في أماكن العناصر (مثل التصميم الذي أرسلته لك)
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     
-    // اختبارات النظام (اختياري)
+    // CardView لتصميم البطاقات الأمنية بشكل عصري
+    implementation 'androidx.cardview:cardview:1.0.0'
+
+    // مكتبة اختيارية لإضافة أنيميشن نبضات الدرع (Shield Pulse)
+    implementation 'com.airbnb.android:lottie:6.1.0'
+
+    // دعم Multi-Dex للأجهزة القديمة
+    implementation 'androidx.multidex:multidex:2.0.1'
+
+    // أدوات الاختبار
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
