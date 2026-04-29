@@ -1,17 +1,14 @@
 package com.vpn.ab;
 
 import android.animation.ArgbEvaluator;
-import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Vibrator;
-import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
@@ -62,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
         isActive = !isActive;
         
         // حفظ الحالة لكي يراها "الجاسوس" داخل واتساب
-        ShieldStatus.setProtectionActive(this, isActive);
+        ShieldStatus.setProtectionState(this, isActive);
         
         // تأثير اهتزاز احترافي
         if (vibrator != null) {
@@ -85,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
         btnStart.setText(active ? "إيقاف الدرع النشط" : "تفعيل الدرع النشط");
 
         if (animate) {
-            // تحريك تغيير الألوان بسلاسة (Interpolation)
+            // تحريك تغيير الألوان بسلاسة (Safe Color Change)
             animateColorChange(btnStart, targetColor);
             animateColorChange(imgStatus, targetColor);
             animateColorChange(txtStatusMain, targetColor);
@@ -106,27 +103,39 @@ public class MainActivity extends AppCompatActivity {
             android.R.drawable.ic_lock_lock);
     }
 
-    private void animateColorChange(Object view, int targetColor) {
-        int colorFrom = (view instanceof TextView) ? 
-            ((TextView) view).getCurrentTextColor() : 
-            ((MaterialButton) view).getBackgroundTintList().getDefaultColor();
+    private void animateColorChange(final Object view, int targetColor) {
+        int colorFrom;
+
+        // فحص النوع بطريقة آمنة لجلب اللون الحالي
+        if (view instanceof MaterialButton) {
+            colorFrom = ((MaterialButton) view).getBackgroundTintList() != null ? 
+                    ((MaterialButton) view).getBackgroundTintList().getDefaultColor() : Color.RED;
+        } else if (view instanceof TextView) {
+            colorFrom = ((TextView) view).getCurrentTextColor();
+        } else if (view instanceof ImageView) {
+            colorFrom = ((ImageView) view).getImageTintList() != null ? 
+                    ((ImageView) view).getImageTintList().getDefaultColor() : Color.RED;
+        } else {
+            return;
+        }
 
         ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), colorFrom, targetColor);
         colorAnimation.setDuration(400);
         colorAnimation.addUpdateListener(animator -> {
             int color = (int) animator.getAnimatedValue();
-            if (view instanceof TextView) {
+            
+            // تطبيق اللون الجديد بناءً على نوع العنصر الفعلي
+            if (view instanceof MaterialButton) {
+                ((MaterialButton) view).setBackgroundTintList(ColorStateList.valueOf(color));
+            } else if (view instanceof TextView) {
                 ((TextView) view).setTextColor(color);
             } else if (view instanceof ImageView) {
                 ((ImageView) view).setImageTintList(ColorStateList.valueOf(color));
-            } else if (view instanceof MaterialButton) {
-                ((MaterialButton) view).setBackgroundTintList(ColorStateList.valueOf(color));
             }
         });
         colorAnimation.start();
     }
 
-    // مراقب ذكي للعداد (يفحص الملفات المشتركة كل ثانية)
     private void startCounterMonitor() {
         handler.postDelayed(new Runnable() {
             @Override
@@ -134,7 +143,6 @@ public class MainActivity extends AppCompatActivity {
                 int count = ShieldStatus.getBlockedCount(MainActivity.this);
                 if (!txtBlockedCount.getText().toString().equals(String.valueOf(count))) {
                     txtBlockedCount.setText(String.valueOf(count));
-                    // اهتزاز خفيف عند إحباط تقرير جديد
                     if (vibrator != null) vibrator.vibrate(20);
                 }
                 handler.postDelayed(this, 1000);
