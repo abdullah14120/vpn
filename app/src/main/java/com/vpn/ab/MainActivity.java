@@ -1,156 +1,42 @@
 package com.vpn.ab;
 
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.content.Context;
-import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Vibrator;
 import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
-
-import com.vpn.ab.proxy.LocalProxyServer;
+import com.vpn.ab.core.ShieldStatus;
 
 public class MainActivity extends AppCompatActivity {
-
-    private LocalProxyServer proxyServer;
-    private boolean isRunning = false;
-    private int blockedCount = 0;
-    private final int PROXY_PORT = 8888; 
-
-    private RelativeLayout mainLayout;
-    private TextView txtStatusMain, txtDescription, txtBlockedCount;
-    private ImageView imgStatus;
-    private Button btnStart;
-    private Vibrator vibrator;
+    private TextView statusText, blockedCounter;
+    private Button toggleButton;
+    private boolean isActive = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mainLayout = findViewById(R.id.mainLayout);
-        txtStatusMain = findViewById(R.id.txtStatusMain);
-        txtDescription = findViewById(R.id.txtDescription);
-        txtBlockedCount = findViewById(R.id.txtBlockedCount);
-        imgStatus = findViewById(R.id.imgStatus);
-        btnStart = findViewById(R.id.btnStart);
+        statusText = findViewById(R.id.statusText);
+        blockedCounter = findViewById(R.id.blockedCounter);
+        toggleButton = findViewById(R.id.toggleButton);
+
+        toggleButton.setOnClickListener(v -> {
+            isActive = !isActive;
+            ShieldStatus.setProtectionActive(this, isActive);
+            updateUI();
+        });
         
-        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-
-        createNotificationChannel();
-        updateUI(false);
-
-        btnStart.setOnClickListener(v -> {
-            if (!isRunning) {
-                startProtection();
-            } else {
-                stopProtection();
-            }
-        });
+        // تحديث العداد بشكل دوري أو عبر Broadcast
+        startCounterListener();
     }
 
-    private void startProtection() {
-        new Thread(() -> {
-            try {
-                proxyServer = new LocalProxyServer(PROXY_PORT, MainActivity.this);
-                proxyServer.start();
-
-                runOnUiThread(() -> {
-                    isRunning = true;
-                    updateUI(true);
-                    showNotification("الدرع النشط", "الحماية تعمل الآن عبر المنفذ " + PROXY_PORT);
-                    if (vibrator != null) vibrator.vibrate(100);
-                    Toast.makeText(this, "🛡️ تم تشغيل السيرفر بنجاح", Toast.LENGTH_SHORT).show();
-                });
-
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    Toast.makeText(this, "فشل التشغيل: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
-            }
-        }).start();
-    }
-
-    private void stopProtection() {
-        if (proxyServer != null) {
-            proxyServer.stopServer();
-            proxyServer = null;
-        }
-
-        isRunning = false;
-        updateUI(false);
-        showNotification("تنبيه أمني", "تم إيقاف درع الحماية ⚠️");
-    }
-
-    private void updateUI(boolean active) {
-        if (active) {
-            mainLayout.setBackgroundColor(Color.parseColor("#0A1F11"));
-            txtStatusMain.setText("النظام محمي");
-            txtStatusMain.setTextColor(Color.parseColor("#4CAF50"));
-            txtDescription.setText("الوكيل نشط (127.0.0.1:" + PROXY_PORT + ")");
-            imgStatus.setImageResource(android.R.drawable.checkbox_on_background);
-            imgStatus.setColorFilter(Color.parseColor("#4CAF50"));
-            btnStart.setText("إيقاف الدرع");
-            btnStart.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#E53935")));
+    private void updateUI() {
+        if (isActive) {
+            statusText.setText("🛡️ درع الحماية نشط");
+            toggleButton.setText("إيقاف الحماية");
         } else {
-            mainLayout.setBackgroundColor(Color.parseColor("#1A0A0A"));
-            txtStatusMain.setText("النظام غير محمي");
-            txtStatusMain.setTextColor(Color.parseColor("#FF5252"));
-            txtDescription.setText("تنبيه: اضبط واتساب على المنفذ " + PROXY_PORT);
-            imgStatus.setImageResource(android.R.drawable.ic_dialog_alert);
-            imgStatus.setColorFilter(Color.parseColor("#FF5252"));
-            btnStart.setText("تفعيل درع الحماية");
-            btnStart.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50")));
+            statusText.setText("⚠️ الحماية متوقفة - واتساب معزول");
+            toggleButton.setText("تفعيل الدرع");
         }
-    }
-
-    public void incrementBlockedCount() {
-        runOnUiThread(() -> {
-            blockedCount++;
-            txtBlockedCount.setText(String.valueOf(blockedCount));
-            Toast.makeText(MainActivity.this, "🛡️ تم حظر محاولة تتبع!", Toast.LENGTH_SHORT).show();
-            if (vibrator != null) vibrator.vibrate(50);
-        });
-    }
-
-    private void showNotification(String title, String content) {
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (manager != null) {
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "shield_channel")
-                    .setSmallIcon(android.R.drawable.ic_lock_lock)
-                    .setContentTitle(title)
-                    .setContentText(content)
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .setAutoCancel(true);
-            
-            manager.notify(1, builder.build());
-        }
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    "shield_channel", 
-                    "حالة الدرع الأمني", 
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
     }
 }
