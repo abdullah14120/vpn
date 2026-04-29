@@ -81,7 +81,7 @@
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:layout_gravity="center"
-                android:src="@android:drawable/ic_menu_shield"
+                android:src="@drawable/ic_shield_status"
                 app:tint="#4CAF50" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
