@@ -58,16 +58,14 @@ public class ShieldStatus {
     /**
      * زيادة عداد التقارير المحبطة (يستدعيها الجاسوس عند اصطياد تقرير).
      */
-    public static void incrementBlockedCount(Context context) {
-        SharedPreferences prefs = getPrefs(context);
-        if (prefs == null) return;
+    public static synchronized void incrementBlockedCount(Context context) {
+    SharedPreferences prefs = getPrefs(context);
+    if (prefs == null) return;
 
-        int currentCount = prefs.getInt(KEY_BLOCKED_COUNT, 0);
-        
-        prefs.edit()
-                .putInt(KEY_BLOCKED_COUNT, currentCount + 1)
-                .putLong(KEY_LAST_INTERCEPT, System.currentTimeMillis())
-                .apply();
+    int currentCount = prefs.getInt(KEY_BLOCKED_COUNT, 0);
+    prefs.edit()
+            .putInt(KEY_BLOCKED_COUNT, currentCount + 1)
+            .apply();
         
         Log.i(TAG, "🎯 تم إحباط تهديد أمني جديد. الإجمالي: " + (currentCount + 1));
     }
