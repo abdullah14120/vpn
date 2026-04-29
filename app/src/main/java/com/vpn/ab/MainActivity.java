@@ -23,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
     private LocalProxyServer proxyServer;
     private boolean isRunning = false;
     private int blockedCount = 0;
+    private final int PROXY_PORT = 8888; // تغيير المنفذ إلى 8888 احتياطياً
 
     // عناصر الواجهة
     private RelativeLayout mainLayout;
@@ -48,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
         createNotificationChannel();
 
-        // تعيين الحالة الافتراضية عند الفتح (متوقف)
+        // تعيين الحالة الافتراضية
         updateUI(false);
 
         btnStart.setOnClickListener(v -> {
@@ -61,19 +62,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startProtection() {
-        try {
-            // تشغيل السيرفر وتمرير 'this' لتمكينه من تحديث العداد
-            proxyServer = new LocalProxyServer(8080, this);
-            proxyServer.start();
+        // تشغيل السيرفر في Thread منفصل لضمان استقرار التطبيق ومنع ERR_CONNECTION_REFUSED
+        new Thread(() -> {
+            try {
+                proxyServer = new LocalProxyServer(PROXY_PORT, MainActivity.this);
+                proxyServer.start();
 
-            isRunning = true;
-            updateUI(true);
-            showNotification("الدرع النشط", "حماية الواتساب تعمل الآن بنجاح ✅");
-            
-            if (vibrator != null) vibrator.vibrate(100); // اهتزاز خفيف للتأكيد
-        } catch (Exception e) {
-            Toast.makeText(this, "فشل تشغيل السيرفر: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
+                runOnUiThread(() -> {
+                    isRunning = true;
+                    updateUI(true);
+                    showNotification("الدرع النشط", "الحماية تعمل الآن عبر المنفذ " + PROXY_PORT);
+                    if (vibrator != null) vibrator.vibrate(100);
+                    Toast.makeText(this, "🛡️ تم تشغيل السيرفر بنجاح", Toast.LENGTH_SHORT).show();
+                });
+
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "فشل التشغيل: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        }).start();
     }
 
     private void stopProtection() {
@@ -84,42 +92,36 @@ public class MainActivity extends AppCompatActivity {
 
         isRunning = false;
         updateUI(false);
-        showNotification("تنبيه أمني", "تم إيقاف الحماية! واتساب في خطر ⚠️");
+        showNotification("تنبيه أمني", "تم إيقاف درع الحماية ⚠️");
     }
 
-    // دالة تحديث الواجهة ديناميكياً
     private void updateUI(boolean active) {
         if (active) {
-            mainLayout.setBackgroundColor(Color.parseColor("#0A1F11")); // أخضر ليلي
+            mainLayout.setBackgroundColor(Color.parseColor("#0A1F11"));
             txtStatusMain.setText("النظام محمي");
             txtStatusMain.setTextColor(Color.parseColor("#4CAF50"));
-            txtDescription.setText("الوكيل الآمن متصل (127.0.0.1:8080)");
+            txtDescription.setText("الوكيل نشط (127.0.0.1:" + PROXY_PORT + ")");
             imgStatus.setImageResource(android.R.drawable.checkbox_on_background);
             imgStatus.setColorFilter(Color.parseColor("#4CAF50"));
             btnStart.setText("إيقاف الدرع");
             btnStart.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#E53935")));
         } else {
-            mainLayout.setBackgroundColor(Color.parseColor("#1A0A0A")); // أحمر ليلي
+            mainLayout.setBackgroundColor(Color.parseColor("#1A0A0A"));
             txtStatusMain.setText("النظام غير محمي");
             txtStatusMain.setTextColor(Color.parseColor("#FF5252"));
-            txtDescription.setText("تنبيه: قم بتشغيل الحماية لتجنب الحظر ⚠️");
+            txtDescription.setText("تنبيه: اضبط واتساب على المنفذ " + PROXY_PORT);
             imgStatus.setImageResource(android.R.drawable.ic_dialog_alert);
             imgStatus.setColorFilter(Color.parseColor("#FF5252"));
-            btnStart.setText("تفعيل الحماية الآن");
+            btnStart.setText("تفعيل درع الحماية");
             btnStart.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#4CAF50")));
         }
     }
 
-    // هذه الدالة يستدعيها كلاس LocalProxyServer عند كل حجب
     public void incrementBlockedCount() {
         runOnUiThread(() -> {
             blockedCount++;
             txtBlockedCount.setText(String.valueOf(blockedCount));
-            
-            // تفاعل بصري سريع عند الحجب
-            Toast.makeText(MainActivity.this, "🛡️ تم حجب تقرير أمني مشبوه!", Toast.LENGTH_SHORT).show();
-            
-            // اهتزاز خفيف جداً لإشعار المستخدم بالنجاح
+            Toast.makeText(MainActivity.this, "🛡️ تم حظر محاولة تتبع!", Toast.LENGTH_SHORT).show();
             if (vibrator != null) vibrator.vibrate(50);
         });
     }
@@ -133,7 +135,9 @@ public class MainActivity extends AppCompatActivity {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true);
         
-        manager.notify(1, builder.build());
+        if (manager != null) {
+            manager.notify(1, builder.build());
+        }
     }
 
     private void createNotificationChannel() {
@@ -149,11 +153,5 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
-    @Override
-    protected void onDestroy() {
-        // نفضل إبقاء السيرفر يعمل في الخلفية حتى لو أغلق النشاط
-        // إلا إذا أردت إغلاقه لضمان توفير الموارد
-        super.onDestroy();
-    }
+}
 }
