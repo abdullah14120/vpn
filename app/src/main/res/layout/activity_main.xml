@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mainLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -11,92 +12,117 @@
         android:id="@+id/imgStatus"
         android:layout_width="140dp"
         android:layout_height="140dp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="80dp"
+        android:layout_marginTop="60dp"
+        android:background="@drawable/bg_glow_red"
+        android:padding="20dp"
         android:src="@android:drawable/ic_lock_lock"
-        android:contentDescription="Status Icon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         app:tint="#FF5252" />
 
     <TextView
         android:id="@+id/txtStatusMain"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/imgStatus"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:text="النظام غير محمي"
+        android:layout_marginTop="24dp"
+        android:text="النظام معزول"
         android:textColor="#FF5252"
         android:textSize="28sp"
-        android:textStyle="bold" />
+        android:fontFamily="sans-serif-black"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/imgStatus" />
 
     <TextView
         android:id="@+id/txtDescription"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_below="@id/txtStatusMain"
         android:layout_marginTop="12dp"
         android:gravity="center"
-        android:text="تنبيه: واتساب لن يعمل بدون تشغيل الوكيل ⚠️"
-        android:textColor="#BBBBBB"
-        android:textSize="14sp" />
+        android:lineSpacingExtra="4dp"
+        android:text="درع الحماية متوقف حالياً. واتساب لن يرسل أو يستقبل أي بيانات لضمان خصوصيتك."
+        android:textColor="#8E8E93"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/txtStatusMain" />
 
     <androidx.cardview.widget.CardView
+        android:id="@+id/cardStats"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@id/btnStart"
-        android:layout_marginBottom="40dp"
+        android:layout_marginBottom="32dp"
         app:cardBackgroundColor="#151821"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp">
+        app:cardCornerRadius="24dp"
+        app:cardElevation="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/btnStart"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="25dp">
+            android:padding="24dp">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="محاولات حظر تم إحباطها"
-                    android:textColor="#888888"
-                    android:textSize="12sp" />
+                    android:text="تقارير أمنية محبطة"
+                    android:textColor="#636366"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-medium" />
+
                 <TextView
                     android:id="@+id/txtBlockedCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
+                    android:layout_marginTop="4dp"
                     android:text="0"
                     android:textColor="#4CAF50"
-                    android:textSize="36sp"
+                    android:textSize="42sp"
+                    android:fontFamily="sans-serif-condensed-light"
                     android:textStyle="bold" />
             </LinearLayout>
 
             <ImageView
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_shield_status"
-                app:tint="#4CAF50" />
-        </LinearLayout>
+                android:id="@+id/iconShield"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:src="@android:drawable/ic_menu_compass"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="#1C1C1E"
+                android:background="@drawable/bg_circle_green"
+                android:padding="12dp"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnStart"
         android:layout_width="match_parent"
-        android:layout_height="65dp"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="20dp"
-        android:backgroundTint="#FF5252"
-        android:text="تفعيل درع الحماية"
+        android:layout_height="70dp"
+        android:layout_marginBottom="16dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:text="تفعيل الدرع النشط"
         android:textColor="#FFFFFF"
         android:textSize="18sp"
-        android:textStyle="bold"
-        app:cornerRadius="15dp" />
+        android:fontFamily="sans-serif-medium"
+        app:backgroundTint="#FF5252"
+        app:cornerRadius="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:rippleColor="#40FFFFFF"
+        app:elevation="8dp" />
 
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
