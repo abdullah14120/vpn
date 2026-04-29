@@ -10,25 +10,31 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="Shield VPN Pro"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
         android:theme="@style/Theme.Shield">
-        
-        <provider
-            android:name=".provider.ShieldProvider"
-            android:authorities="com.vpn.ab.shield_provider"
-            android:exported="true"
-            android:enabled="true" />
 
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name=".core.ShieldProvider"
+            android:authorities="com.vpn.ab.shield_provider"
+            android:enabled="true"
+            android:exported="true" />
+
     </application>
 
     <queries>
         <package android:name="com.whatsapp" />
-        <package android:name="com.yowhatsapp" />
-    </application>
+        <package android:name="com.target.app" />
+        <package android:name="com.abdullahtamemi" />
+    </queries>
 
 </manifest>
