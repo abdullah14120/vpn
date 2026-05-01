@@ -16,7 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
-import com.vpn.ab.core.LogAdapter; // تأكد من وجود كلاس الـ Adapter
+import com.vpn.ab.core.LogAdapter; 
 import com.vpn.ab.core.ShieldStatus;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerSecurityLog;
     private LogAdapter logAdapter;
     private List<String> logList = new ArrayList<>();
-    private int lastKnownCount = 0; // لمراقبة قفزات العداد
+    private int lastKnownCount = 0; 
 
     private Vibrator vibrator;
     private Handler handler = new Handler(Looper.getMainLooper());
@@ -43,6 +43,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // الآن MainActivity لا تفحص التراخيص، بل تعرض الواجهة مباشرة
+        // لأن SplashActivity قامت بالمهمة مسبقاً
         setContentView(R.layout.activity_main);
 
         initViews();
@@ -73,14 +76,15 @@ public class MainActivity extends AppCompatActivity {
         recyclerSecurityLog.setLayoutManager(new LinearLayoutManager(this));
         recyclerSecurityLog.setAdapter(logAdapter);
         
-        // رسالة ترحيبية عند التشغيل
+        // رسائل ترحيبية احترافية عند التشغيل
         addToLog("SYSTEM: تم تشغيل بروتوكول الحماية النشط.");
+        addToLog("SYSTEM: حالة الترخيص: [مفعل - نسخة بريميوم].");
         addToLog("SYSTEM: في انتظار رصد تهديدات من حزمة الواتساب...");
     }
 
     private void setupInitialState() {
         isActive = ShieldStatus.isProtectionActive(this);
-        lastKnownCount = ShieldStatus.getBlockedCount(this); // مزامنة العداد عند البدء
+        lastKnownCount = ShieldStatus.getBlockedCount(this); 
         updateUI(isActive, false);
     }
 
@@ -96,12 +100,11 @@ public class MainActivity extends AppCompatActivity {
         addToLog(isActive ? "PROTOCOL: تم تفعيل درع حماية الواتساب." : "PROTOCOL: تم إيقاف الحماية، النظام في وضع الاستعداد.");
     }
 
-    // دالة إضافة سطر للسجل الأمني
     private void addToLog(String message) {
         String timeStamp = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
         String entry = "> [" + timeStamp + "] " + message;
         
-        logList.add(0, entry); // إضافة في البداية ليكون الأحدث فوق
+        logList.add(0, entry);
         runOnUiThread(() -> {
             logAdapter.notifyItemInserted(0);
             recyclerSecurityLog.scrollToPosition(0);
@@ -165,21 +168,14 @@ public class MainActivity extends AppCompatActivity {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                // جلب القيمة الحالية من الـ Provider/SharedPreferences
                 int currentCount = ShieldStatus.getBlockedCount(MainActivity.this);
-                
-                // إذا زاد العداد، نقوم بتسجيل "تقرير إحباط" في الشاشة الأمنية
                 if (currentCount > lastKnownCount) {
                     int diff = currentCount - lastKnownCount;
                     addToLog("INTERCEPT: تم إحباط محاولة تمرير تقرير لشركة الواتساب لحظر حسابك (تقرير أمني) عدد: " + diff);
-                    
-                    // تحديث رقم العداد في الواجهة
                     txtBlockedCount.setText(String.valueOf(currentCount));
-                    
                     if (vibrator != null) vibrator.vibrate(40);
-                    lastKnownCount = currentCount; // تحديث القيمة الأخيرة للمراقبة
+                    lastKnownCount = currentCount;
                 }
-                
                 handler.postDelayed(this, 1000);
             }
         }, 1000);
