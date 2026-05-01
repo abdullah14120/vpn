@@ -16,7 +16,7 @@
     <string name="request_sent_success">تم إرسال طلبك للأدمن بنجاح. يرجى الانتظار للموافقة.</string>
     <string name="request_pending">⏳ طلبك قيد المراجعة حالياً...</string>
     <string name="request_failed">فشل الإرسال، تحقق من اتصال الإنترنت</string>
-
+    <string name="btn_request_text">إرسال طلب تفعيل</string>
     <string name="status_protected">الواتساب محمي</string>
     <string name="status_unprotected">الواتساب غير محمي</string>
     <string name="desc_active">درع الحماية يعمل الآن. واتساب متصل عبر قناة آمنة ومراقبة.</string>
