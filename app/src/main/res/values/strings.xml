@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">درع حماية الواتساب</string>
+
+    <string name="activation_title">نظام الحماية مقيد</string>
+    <string name="activation_subtitle">يرجى تفعيل الترخيص للوصول إلى محرك الدرع النشط</string>
+    <string name="device_id_label">معرف الجهاز الفريد (Device ID):</string>
+    <string name="copy_id">نسخ المعرف</string>
+    <string name="request_activation">إرسال طلب تفعيل</string>
+    <string name="contact_info">@Abdullah_AlTamimi</string>
+    <string name="copyright_text">🛡️ SHIELD CORE | جميع الحقوق محفوظة لـ Abdullah Al-Tamimi</string>
+    
+    <string name="id_copied">تم نسخ المعرف بنجاح</string>
+    <string name="enter_name_error">يرجى إدخال اسمك لتمييز طلبك لدى الأدمن</string>
+    <string name="request_sent_success">تم إرسال طلبك للأدمن بنجاح. يرجى الانتظار للموافقة.</string>
+    <string name="request_pending">طلبك قيد المراجعة حالياً</string>
+    <string name="request_failed">فشل الإرسال، تحقق من اتصال الإنترنت</string>
+
+    <string name="status_protected">الواتساب محمي</string>
+    <string name="status_unprotected">الواتساب غير محمي</string>
+    <string name="desc_active">درع الحماية يعمل الآن. واتساب متصل عبر قناة آمنة ومراقبة.</string>
+    <string name="desc_inactive">درع الحماية متوقف حالياً. واتساب لن يرسل أو يستقبل أي بيانات لضمان خصوصيتك.</string>
+    <string name="btn_stop_shield">إيقاف الدرع النشط</string>
+    <string name="btn_start_shield">تفعيل الدرع النشط</string>
+    <string name="security_reports_label">تقارير أمنية محبطة</string>
+    <string name="terminal_label">>_ استعراض التهديدات النشطة</string>
+
+    <string name="loading_core">INITIALIZING SHIELD CORE...</string>
+    <string name="license_check">جاري فحص التراخيص...</string>
+</resources>
