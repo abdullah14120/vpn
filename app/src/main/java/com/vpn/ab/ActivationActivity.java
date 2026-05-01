@@ -63,7 +63,7 @@ public class ActivationActivity extends AppCompatActivity {
         String userName = edtUserName.getText().toString().trim();
 
         if (userName.isEmpty()) {
-            Toast.makeText(this, "يرجى إدخال اسمك لتمييز طلبك لدى الأدمن", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "يرجى إدخال رقمك لتمييز طلبك لدى الأدمن", Toast.LENGTH_LONG).show();
             return;
         }
 
