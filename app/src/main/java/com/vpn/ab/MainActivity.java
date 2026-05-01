@@ -55,43 +55,69 @@ public class MainActivity extends AppCompatActivity {
     private Handler handler = new Handler(Looper.getMainLooper());
     private boolean isActive = false;
     private DatabaseReference userRef;
+    private DatabaseReference requestRef;
     private String androidId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // 1. الفحص الصارم: إذا لم يكن هناك ترخيص نهائياً، اخرج فوراً لواجهة التفعيل
-        // هذا يمنع أي مستخدم جديد من رؤية الواجهة الرئيسية
-        if (!ShieldStatus.isLicenseValid(this)) {
-            navigateToActivation();
-            return;
-        }
-
-        setContentView(R.layout.activity_main);
-
         androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         userRef = FirebaseDatabase.getInstance().getReference("Users").child(androidId);
+        requestRef = FirebaseDatabase.getInstance().getReference("Requests").child(androidId);
 
+        // 1. الفحص الذكي: إذا لم يكن مفعل محلياً، نتحقق من السيرفر قبل الطرد
+        if (!ShieldStatus.isLicenseValid(this)) {
+            checkIfRequestExists();
+        } else {
+            initializeMainUI();
+        }
+    }
+
+    private void initializeMainUI() {
+        setContentView(R.layout.activity_main);
         initViews();
-        setupTerminal(); // تهيئة السجل قبل أي شيء آخر
+        setupTerminal();
         startLicenseObserver();
-        checkLicenseState();
-        
+        setupInitialState();
         requestBatteryOptimizationIgnore();
-
         btnStart.setOnClickListener(v -> toggleShield());
+    }
+
+    private void checkIfRequestExists() {
+        // التحقق هل للمستخدم طلب تفعيل في السيرفر؟
+        requestRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    // الطلب موجود، نفتح الواجهة الرئيسية ونعرض حالة الانتظار
+                    setContentView(R.layout.activity_main);
+                    initViews();
+                    setupTerminal();
+                    showShieldUI(false);
+                    txtPendingStatus.setText(R.string.request_pending);
+                    startLicenseObserver(); // نراقب اللحظة التي يوافق فيها الأدمن
+                } else {
+                    // لا يوجد طلب ولا تفعيل، نرسله لواجهة التفعيل
+                    navigateToActivation();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                navigateToActivation();
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // ضمان تحديث البيانات عند العودة من الخلفية
         if (ShieldStatus.isLicenseValid(this)) {
-            refreshStats();
-            startCounterMonitor();
-        } else {
-            navigateToActivation();
+            if (txtBlockedCount != null) {
+                refreshStats();
+                startCounterMonitor();
+            }
         }
     }
 
@@ -115,7 +141,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupTerminal() {
-        // حل مشكلة عدم الكتابة: التأكد من ربط الـ Adapter بالقائمة الحالية
         if (logAdapter == null) {
             logAdapter = new LogAdapter(logList);
             recyclerSecurityLog.setLayoutManager(new LinearLayoutManager(this));
@@ -131,13 +156,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkLicenseState() {
-        // فحص الحالة لعرض واجهة الانتظار إذا كان الطلب تحت المراجعة
         if (ShieldStatus.isLicenseValid(this)) {
             showShieldUI(true);
             setupInitialState();
         } else {
             showShieldUI(false);
-            txtPendingStatus.setText("⏳ في انتظار موافقة الأدمن على طلبك...");
+            txtPendingStatus.setText(R.string.request_pending);
         }
     }
 
@@ -149,9 +173,15 @@ public class MainActivity extends AppCompatActivity {
         imgStatus.setVisibility(visibility);
         txtStatusMain.setVisibility(visibility);
         txtDescription.setVisibility(visibility);
-        findViewById(R.id.cardStats).setVisibility(visibility);
-        findViewById(R.id.cardTerminal).setVisibility(visibility);
-        findViewById(R.id.lblTerminal).setVisibility(visibility);
+        
+        // التأكد من وجود البطاقات في XML
+        View cardStats = findViewById(R.id.cardStats);
+        View cardTerminal = findViewById(R.id.cardTerminal);
+        View lblTerminal = findViewById(R.id.lblTerminal);
+        
+        if (cardStats != null) cardStats.setVisibility(visibility);
+        if (cardTerminal != null) cardTerminal.setVisibility(visibility);
+        if (lblTerminal != null) lblTerminal.setVisibility(visibility);
         
         if (layoutPending != null) layoutPending.setVisibility(pendingVisibility);
     }
@@ -171,9 +201,11 @@ public class MainActivity extends AppCompatActivity {
                                 addToLog("SYSTEM: تم استقبال تصريح النشاط.. الدرع مفعّل.");
                             });
                         }
-                    } else {
-                        // إذا سحب الأدمن الترخيص، يخرج فوراً
+                    } else if (ShieldStatus.isLicenseValid(MainActivity.this)) {
+                        // إذا تم سحب الترخيص والأدمن أزال التفعيل من قاعدة البيانات
                         ShieldStatus.setProtectionState(MainActivity.this, false);
+                        // هنا لا نطرده فوراً بل نمسح التفعيل المحلي ونعيد فحصه
+                        getSharedPreferences("security_prefs", MODE_PRIVATE).edit().clear().apply();
                         navigateToActivation();
                     }
                 }
@@ -253,8 +285,8 @@ public class MainActivity extends AppCompatActivity {
         int colorGreen = Color.parseColor("#4CAF50");
         int targetColor = active ? colorGreen : colorRed;
         
-        txtStatusMain.setText(active ? "الواتساب محمي" : "الواتساب غير محمي");
-        btnStart.setText(active ? "إيقاف الدرع النشط" : "تفعيل الدرع النشط");
+        txtStatusMain.setText(active ? R.string.status_protected : R.string.status_unprotected);
+        btnStart.setText(active ? R.string.btn_stop_shield : R.string.btn_start_shield);
 
         if (animate) {
             animateColorChange(btnStart, targetColor);
