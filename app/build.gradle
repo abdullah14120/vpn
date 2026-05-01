@@ -76,3 +76,4 @@ dependencies {
     // 3. مكتبة الـ Lifecycle (لمراقبة حالة التطبيق وضمان عدم توقف الدرع في الخلفية)
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
 }
+
