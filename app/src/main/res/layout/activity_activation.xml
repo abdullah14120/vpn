@@ -24,7 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:fontFamily="sans-serif-black"
-        android:text="التطبيق غير مفعل"
+        android:text="@string/activation_title"
         android:textColor="#FFFFFF"
         android:textSize="22sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -37,7 +37,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center"
-        android:text="يرجى تفعيل الترخيص للبدء في حماية الواتساب"
+        android:text="@string/activation_subtitle"
         android:textColor="#8E8E93"
         android:textSize="13sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -63,7 +63,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="معرف الجهاز الفريد (Device ID):"
+                android:text="@string/device_id_label"
                 android:textColor="#00FF41"
                 android:textSize="11sp"
                 android:fontFamily="monospace" />
@@ -79,7 +79,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="يرجى الإنتظار..."
+                    android:text="@string/wait_label"
                     android:textColor="#FFFFFF"
                     android:textSize="14sp"
                     android:fontFamily="monospace" />
@@ -101,7 +101,7 @@
         android:layout_height="56dp"
         android:layout_marginTop="16dp"
         android:background="@drawable/bg_edittext_dark"
-        android:hint="أدخل رقم الهاتف"
+        android:hint="@string/phone_hint"
         android:paddingHorizontal="16dp"
         android:textColor="#FFFFFF"
         android:textColorHint="#444444"
@@ -113,7 +113,7 @@
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_marginTop="24dp"
-        android:text="إرسال طلب تفعيل"
+        android:text="@string/btn_request_text"
         android:textColor="#FFFFFF"
         android:textSize="16sp"
         android:textStyle="bold"
@@ -142,7 +142,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:fontFamily="sans-serif-medium"
-            android:text="جاري إرسال طلبك للسيرفر..."
+            android:text="@string/loading_request"
             android:textColor="#00FF41"
             android:textSize="14sp" />
     </LinearLayout>
@@ -159,7 +159,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="للتفعيل المباشر، تواصل : 770034578"
+            android:text="@string/contact_prefix"
             android:textColor="#636366"
             android:textSize="11sp" />
 
@@ -168,7 +168,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="+967 770034578"
+            android:text="@string/contact_info"
             android:textColor="#00FF41"
             android:textSize="14sp"
             android:textStyle="bold" />
@@ -178,7 +178,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:alpha="0.5"
-            android:text="🛡️ SHIELD CORE | جميع الحقوق محفوظة لـ Abdullah Al-Tamimi"
+            android:text="@string/copyright_text"
             android:textColor="#FFFFFF"
             android:textSize="9sp"
             android:fontFamily="sans-serif-thin" />
