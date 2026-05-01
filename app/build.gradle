@@ -40,10 +40,6 @@ android {
         // تفعيل ViewBinding إذا أردت استخدامه لاحقاً لتسهيل الربط
         viewBinding true
     }
-
-    repositories {
-    google()
-    mavenCentral() // أضف هذا السطر هنا أيضاً للتأكيد
 }
 
 dependencies {
