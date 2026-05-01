@@ -1,8 +1,6 @@
 package com.vpn.ab;
 
 import android.animation.ArgbEvaluator;
-import android.animation.ObjectAnimator;
-import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -14,25 +12,39 @@ import android.os.Vibrator;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.airbnb.android.lottie.LottieAnimationView;
 import com.google.android.material.button.MaterialButton;
+import com.vpn.ab.core.LogAdapter;
 import com.vpn.ab.core.ShieldStatus;
+
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
     // عناصر الواجهة المحدثة
-    private View viewGlow, statusIndicator;
+    private View statusIndicator;
     private ImageView imgStatus;
-    private TextView txtStatusMain, txtStatusMini, txtBlockedCount, txtThreatCount, txtSecurityLog;
+    private TextView txtStatusMain, txtStatusMini, txtBlockedCount, txtThreatCount;
     private MaterialButton btnStart;
+    
+    // المكونات الجديدة (Lottie & RecyclerView)
+    private LottieAnimationView lottieShield;
+    private RecyclerView recyclerSecurityLog;
+    private LogAdapter logAdapter;
+    private List<String> logList = new ArrayList<>();
     
     private Vibrator vibrator;
     private Handler handler = new Handler(Looper.getMainLooper());
     private boolean isActive = false;
-    private ObjectAnimator pulseAnimator;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         initViews();
-        setupAnimations();
+        setupRecyclerView();
         setupInitialState();
 
         btnStart.setOnClickListener(v -> toggleShield());
@@ -50,29 +62,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        viewGlow = findViewById(R.id.viewGlow);
         statusIndicator = findViewById(R.id.statusIndicator);
         imgStatus = findViewById(R.id.imgStatus);
         txtStatusMain = findViewById(R.id.txtStatusMain);
         txtStatusMini = findViewById(R.id.txtStatusMini);
         txtBlockedCount = findViewById(R.id.txtBlockedCount);
         txtThreatCount = findViewById(R.id.txtThreatCount);
-        txtSecurityLog = findViewById(R.id.txtSecurityLog);
         btnStart = findViewById(R.id.btnStart);
+        
+        // ربط المكونات المضافة حديثاً
+        lottieShield = findViewById(R.id.lottieShield);
+        recyclerSecurityLog = findViewById(R.id.recyclerSecurityLog);
+        
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
     }
 
-    private void setupAnimations() {
-        // إنشاء تأثير النبض (Pulse) للتوهج خلف الدرع
-        pulseAnimator = ObjectAnimator.ofPropertyValuesHolder(
-                viewGlow,
-                PropertyValuesHolder.ofFloat("scaleX", 1.0f, 1.4f),
-                PropertyValuesHolder.ofFloat("scaleY", 1.0f, 1.4f),
-                PropertyValuesHolder.ofFloat("alpha", 0.3f, 0.0f)
-        );
-        pulseAnimator.setDuration(1500);
-        pulseAnimator.setRepeatCount(ObjectAnimator.INFINITE);
-        pulseAnimator.setRepeatMode(ObjectAnimator.RESTART);
+    private void setupRecyclerView() {
+        // إعداد المحول والقائمة للسجل الأمني
+        logAdapter = new LogAdapter(logList);
+        recyclerSecurityLog.setLayoutManager(new LinearLayoutManager(this));
+        recyclerSecurityLog.setAdapter(logAdapter);
     }
 
     private void setupInitialState() {
@@ -101,22 +110,21 @@ public class MainActivity extends AppCompatActivity {
         txtStatusMain.setText(active ? "درع الحماية نشط" : "النظام في انتظار الأوامر");
         txtStatusMini.setText(active ? "STATUS: PROTECTED" : "STATUS: STANDBY");
         txtStatusMini.setTextColor(active ? Color.GREEN : dimGray);
-        btnStart.setText(active ? "تعطيل بروتوكول الحماية" : "تفعيل بروتوكol الحماية");
+        btnStart.setText(active ? "تعطيل بروتوكول الحماية" : "تفعيل بروتوكول الحماية");
 
         if (active) {
-            pulseAnimator.start();
+            lottieShield.playAnimation();
+            lottieShield.setVisibility(View.VISIBLE);
             statusIndicator.setBackgroundTintList(ColorStateList.valueOf(Color.GREEN));
         } else {
-            pulseAnimator.cancel();
-            viewGlow.setAlpha(0f);
+            lottieShield.cancelAnimation();
+            lottieShield.setVisibility(View.INVISIBLE);
             statusIndicator.setBackgroundTintList(ColorStateList.valueOf(Color.GRAY));
         }
 
         if (animate) {
             animateColorChange(btnStart, targetColor);
             animateColorChange(imgStatus, targetColor);
-            
-            // تحريك الأيقونة
             imgStatus.animate().rotationY(active ? 360f : 0f).setDuration(500).start();
         } else {
             btnStart.setBackgroundTintList(ColorStateList.valueOf(targetColor));
@@ -130,11 +138,21 @@ public class MainActivity extends AppCompatActivity {
 
     private void addToLog(String message) {
         String timeStamp = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
-        String currentLog = txtSecurityLog.getText().toString();
-        // نبقي آخر 10 أسطر فقط لضمان الأداء
-        String newLog = "> [" + timeStamp + "] " + message + "\n" + currentLog;
-        if (newLog.length() > 500) newLog = newLog.substring(0, 500);
-        txtSecurityLog.setText(newLog);
+        String entry = "> [" + timeStamp + "] " + message;
+
+        // إضافة السطر الجديد في أعلى القائمة لتسهيل الرؤية
+        logList.add(0, entry);
+        
+        // الحفاظ على أداء التطبيق عبر مسح الأسطر القديمة جداً
+        if (logList.size() > 50) {
+            logList.remove(logList.size() - 1);
+        }
+
+        // تحديث الواجهة من خلال الـ Adapter
+        runOnUiThread(() -> {
+            logAdapter.notifyItemInserted(0);
+            recyclerSecurityLog.scrollToPosition(0);
+        });
     }
 
     private void startSystemMonitoring() {
@@ -143,9 +161,12 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 int blocked = ShieldStatus.getBlockedCount(MainActivity.this);
                 
-                // تحديث العداد بتأثير "العداد المتصاعد"
-                if (!txtBlockedCount.getText().toString().equals(String.valueOf(blocked))) {
-                    animateNumber(txtBlockedCount, Integer.parseInt(txtBlockedCount.getText().toString()), blocked);
+                // تحديث العداد بتأثير الحركة إذا تغيرت القيمة
+                String currentStr = txtBlockedCount.getText().toString();
+                int currentVal = currentStr.isEmpty() ? 0 : Integer.parseInt(currentStr);
+                
+                if (currentVal != blocked) {
+                    animateNumber(txtBlockedCount, currentVal, blocked);
                     addToLog("INTERCEPT: Security Packet Blocked");
                     if (vibrator != null) vibrator.vibrate(20);
                 }
@@ -163,9 +184,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void animateColorChange(final View view, int targetColor) {
-        int colorFrom = view instanceof MaterialButton ? 
-                ((MaterialButton) view).getBackgroundTintList().getDefaultColor() : 
-                ((ImageView) view).getImageTintList().getDefaultColor();
+        ColorStateList currentTint = (view instanceof MaterialButton) ? 
+                ((MaterialButton) view).getBackgroundTintList() : 
+                ((ImageView) view).getImageTintList();
+        
+        int colorFrom = (currentTint != null) ? currentTint.getDefaultColor() : Color.RED;
 
         ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), colorFrom, targetColor);
         colorAnimation.setDuration(500);
@@ -173,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
             int color = (int) animator.getAnimatedValue();
             if (view instanceof MaterialButton) {
                 ((MaterialButton) view).setBackgroundTintList(ColorStateList.valueOf(color));
-            } else {
+            } else if (view instanceof ImageView) {
                 ((ImageView) view).setImageTintList(ColorStateList.valueOf(color));
             }
         });
