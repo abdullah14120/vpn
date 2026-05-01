@@ -9,17 +9,33 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Vibrator;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
+import com.vpn.ab.core.LogAdapter; // تأكد من وجود كلاس الـ Adapter
 import com.vpn.ab.core.ShieldStatus;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
     private ImageView imgStatus, iconShield;
     private TextView txtStatusMain, txtDescription, txtBlockedCount;
     private MaterialButton btnStart;
+    
+    // إضافات الشاشة الأمنية
+    private RecyclerView recyclerSecurityLog;
+    private LogAdapter logAdapter;
+    private List<String> logList = new ArrayList<>();
+    private int lastKnownCount = 0; // لمراقبة قفزات العداد
+
     private Vibrator vibrator;
     private Handler handler = new Handler(Looper.getMainLooper());
     private boolean isActive = false;
@@ -30,12 +46,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         initViews();
+        setupTerminal(); // إعداد السجل الأمني
         setupInitialState();
 
-        // مستمع لزر التفعيل
         btnStart.setOnClickListener(v -> toggleShield());
 
-        // بدء مراقبة العداد القادم من واتساب
+        // بدء مراقبة العداد القادم من واتساب والربط بالسجل
         startCounterMonitor();
     }
 
@@ -46,27 +62,50 @@ public class MainActivity extends AppCompatActivity {
         txtDescription = findViewById(R.id.txtDescription);
         txtBlockedCount = findViewById(R.id.txtBlockedCount);
         btnStart = findViewById(R.id.btnStart);
+        recyclerSecurityLog = findViewById(R.id.recyclerSecurityLog);
+        
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
     }
 
+    private void setupTerminal() {
+        // إعداد الـ RecyclerView لعرض السجل الأمني
+        logAdapter = new LogAdapter(logList);
+        recyclerSecurityLog.setLayoutManager(new LinearLayoutManager(this));
+        recyclerSecurityLog.setAdapter(logAdapter);
+        
+        // رسالة ترحيبية عند التشغيل
+        addToLog("SYSTEM: تم تشغيل بروتوكول الحماية النشط.");
+        addToLog("SYSTEM: في انتظار رصد تهديدات من حزمة الواتساب...");
+    }
+
     private void setupInitialState() {
-        // جلب الحالة الأخيرة المخزنة
         isActive = ShieldStatus.isProtectionActive(this);
+        lastKnownCount = ShieldStatus.getBlockedCount(this); // مزامنة العداد عند البدء
         updateUI(isActive, false);
     }
 
     private void toggleShield() {
         isActive = !isActive;
-        
-        // حفظ الحالة لكي يراها "الجاسوس" داخل واتساب
         ShieldStatus.setProtectionState(this, isActive);
         
-        // تأثير اهتزاز احترافي
         if (vibrator != null) {
             vibrator.vibrate(isActive ? 70 : 30);
         }
 
         updateUI(isActive, true);
+        addToLog(isActive ? "PROTOCOL: تم تفعيل العزل السيبراني." : "PROTOCOL: تم إيقاف الحماية، النظام في وضع الاستعداد.");
+    }
+
+    // دالة إضافة سطر للسجل الأمني
+    private void addToLog(String message) {
+        String timeStamp = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
+        String entry = "> [" + timeStamp + "] " + message;
+        
+        logList.add(0, entry); // إضافة في البداية ليكون الأحدث فوق
+        runOnUiThread(() -> {
+            logAdapter.notifyItemInserted(0);
+            recyclerSecurityLog.scrollToPosition(0);
+        });
     }
 
     private void updateUI(boolean active, boolean animate) {
@@ -74,7 +113,6 @@ public class MainActivity extends AppCompatActivity {
         int colorGreen = Color.parseColor("#4CAF50");
         int targetColor = active ? colorGreen : colorRed;
 
-        // تحديث النصوص
         txtStatusMain.setText(active ? "النظام محمي" : "النظام معزول");
         txtDescription.setText(active ? 
             "درع الحماية يعمل الآن. واتساب متصل عبر قناة آمنة ومراقبة." : 
@@ -82,12 +120,10 @@ public class MainActivity extends AppCompatActivity {
         btnStart.setText(active ? "إيقاف الدرع النشط" : "تفعيل الدرع النشط");
 
         if (animate) {
-            // تحريك تغيير الألوان بسلاسة (Safe Color Change)
             animateColorChange(btnStart, targetColor);
             animateColorChange(imgStatus, targetColor);
             animateColorChange(txtStatusMain, targetColor);
             
-            // تحريك الأيقونة (Pulse Animation)
             imgStatus.animate().scaleX(1.1f).scaleY(1.1f).setDuration(150).withEndAction(() -> {
                 imgStatus.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
             }).start();
@@ -97,7 +133,6 @@ public class MainActivity extends AppCompatActivity {
             txtStatusMain.setTextColor(targetColor);
         }
 
-        // تغيير الأيقونة
         imgStatus.setImageResource(active ? 
             android.R.drawable.ic_lock_idle_lock : 
             android.R.drawable.ic_lock_lock);
@@ -105,8 +140,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void animateColorChange(final Object view, int targetColor) {
         int colorFrom;
-
-        // فحص النوع بطريقة آمنة لجلب اللون الحالي
         if (view instanceof MaterialButton) {
             colorFrom = ((MaterialButton) view).getBackgroundTintList() != null ? 
                     ((MaterialButton) view).getBackgroundTintList().getDefaultColor() : Color.RED;
@@ -115,23 +148,15 @@ public class MainActivity extends AppCompatActivity {
         } else if (view instanceof ImageView) {
             colorFrom = ((ImageView) view).getImageTintList() != null ? 
                     ((ImageView) view).getImageTintList().getDefaultColor() : Color.RED;
-        } else {
-            return;
-        }
+        } else return;
 
         ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), colorFrom, targetColor);
         colorAnimation.setDuration(400);
         colorAnimation.addUpdateListener(animator -> {
             int color = (int) animator.getAnimatedValue();
-            
-            // تطبيق اللون الجديد بناءً على نوع العنصر الفعلي
-            if (view instanceof MaterialButton) {
-                ((MaterialButton) view).setBackgroundTintList(ColorStateList.valueOf(color));
-            } else if (view instanceof TextView) {
-                ((TextView) view).setTextColor(color);
-            } else if (view instanceof ImageView) {
-                ((ImageView) view).setImageTintList(ColorStateList.valueOf(color));
-            }
+            if (view instanceof MaterialButton) ((MaterialButton) view).setBackgroundTintList(ColorStateList.valueOf(color));
+            else if (view instanceof TextView) ((TextView) view).setTextColor(color);
+            else if (view instanceof ImageView) ((ImageView) view).setImageTintList(ColorStateList.valueOf(color));
         });
         colorAnimation.start();
     }
@@ -140,11 +165,21 @@ public class MainActivity extends AppCompatActivity {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                int count = ShieldStatus.getBlockedCount(MainActivity.this);
-                if (!txtBlockedCount.getText().toString().equals(String.valueOf(count))) {
-                    txtBlockedCount.setText(String.valueOf(count));
-                    if (vibrator != null) vibrator.vibrate(20);
+                // جلب القيمة الحالية من الـ Provider/SharedPreferences
+                int currentCount = ShieldStatus.getBlockedCount(MainActivity.this);
+                
+                // إذا زاد العداد، نقوم بتسجيل "تقرير إحباط" في الشاشة الأمنية
+                if (currentCount > lastKnownCount) {
+                    int diff = currentCount - lastKnownCount;
+                    addToLog("INTERCEPT: تم إحباط محاولة تمرير تقرير أمني (integrity) عدد: " + diff);
+                    
+                    // تحديث رقم العداد في الواجهة
+                    txtBlockedCount.setText(String.valueOf(currentCount));
+                    
+                    if (vibrator != null) vibrator.vibrate(40);
+                    lastKnownCount = currentCount; // تحديث القيمة الأخيرة للمراقبة
                 }
+                
                 handler.postDelayed(this, 1000);
             }
         }, 1000);
