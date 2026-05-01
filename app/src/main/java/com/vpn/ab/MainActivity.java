@@ -4,12 +4,14 @@ import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.view.View;
@@ -29,6 +31,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.vpn.ab.core.LogAdapter; 
 import com.vpn.ab.core.ShieldStatus;
+import com.vpn.ab.core.ShieldForegroundService; // تأكد من إنشاء هذا الكلاس
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -41,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView txtStatusMain, txtDescription, txtBlockedCount;
     private MaterialButton btnStart;
     
-    // عناصر واجهة الانتظار
     private LinearLayout layoutPending;
     private TextView txtPendingStatus;
 
@@ -66,14 +68,21 @@ public class MainActivity extends AppCompatActivity {
 
         initViews();
         setupTerminal();
-        
-        // البدء بمراقبة حالة الترخيص من السيرفر (للتفعيل اللحظي)
         startLicenseObserver();
-        
-        // التحقق من حالة العرض (هل هو مفعل أم ينتظر؟)
         checkLicenseState();
+        
+        // طلب تجاهل تحسين البطارية لضمان البقاء في الخلفية
+        requestBatteryOptimizationIgnore();
 
         btnStart.setOnClickListener(v -> toggleShield());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // تحديث العداد فور العودة للتطبيق لجلب ما تم رصده في الخلفية
+        refreshStats();
+        // البدء بمراقبة التحديثات اللحظية للواجهة
         startCounterMonitor();
     }
 
@@ -85,21 +94,22 @@ public class MainActivity extends AppCompatActivity {
         txtBlockedCount = findViewById(R.id.txtBlockedCount);
         btnStart = findViewById(R.id.btnStart);
         recyclerSecurityLog = findViewById(R.id.recyclerSecurityLog);
-        
-        // ربط عناصر الانتظار (تأكد من وجودها في XML أو استخدم findViewById)
         layoutPending = findViewById(R.id.layoutPending); 
         txtPendingStatus = findViewById(R.id.txtPendingStatus);
-
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+    }
+
+    private void refreshStats() {
+        int currentSavedCount = ShieldStatus.getBlockedCount(this);
+        txtBlockedCount.setText(String.valueOf(currentSavedCount));
+        lastKnownCount = currentSavedCount;
     }
 
     private void checkLicenseState() {
         if (ShieldStatus.isLicenseValid(this)) {
-            // إذا كان مرخصاً، نظهر واجهة الدرع ونخفي الانتظار
             showShieldUI(true);
             setupInitialState();
         } else {
-            // إذا لم يكن مرخصاً، نظهر واجهة الانتظار ونخفي أزرار الدرع
             showShieldUI(false);
             txtPendingStatus.setText("⏳ في انتظار موافقة الأدمن على طلبك...");
         }
@@ -108,12 +118,10 @@ public class MainActivity extends AppCompatActivity {
     private void showShieldUI(boolean isLicensed) {
         int visibility = isLicensed ? View.VISIBLE : View.GONE;
         int pendingVisibility = isLicensed ? View.GONE : View.VISIBLE;
-
         btnStart.setVisibility(visibility);
         imgStatus.setVisibility(visibility);
         txtStatusMain.setVisibility(visibility);
         txtDescription.setVisibility(visibility);
-        
         if (layoutPending != null) layoutPending.setVisibility(pendingVisibility);
     }
 
@@ -123,47 +131,93 @@ public class MainActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
                     Boolean isActivated = snapshot.child("is_activated").getValue(Boolean.class);
-                    if (isActivated != null && isActivated) {
-                        // تفعيل محلي فوراً
+                    if (isActivated != null && isActivated && !ShieldStatus.isLicenseValid(MainActivity.this)) {
                         ShieldStatus.activateLicenseLocally(MainActivity.this);
-                        
-                        // تحديث الواجهة فوراً دون إعادة تشغيل
                         runOnUiThread(() -> {
                             showShieldUI(true);
                             setupInitialState();
-                            addToLog("SYSTEM: تم تفعيل الترخيص بنجاح من قبل الأدمن.");
+                            addToLog("SYSTEM: تم تفعيل الترخيص بنجاح.");
                         });
                     }
                 }
             }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {}
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    // باقي الدوال (setupTerminal, setupInitialState, toggleShield, addToLog, updateUI, animateColorChange, startCounterMonitor) تبقى كما هي...
-    // مع إضافة دالة setupInitialState للتأكد من الحالة
-    
     private void setupTerminal() {
         logAdapter = new LogAdapter(logList);
         recyclerSecurityLog.setLayoutManager(new LinearLayoutManager(this));
         recyclerSecurityLog.setAdapter(logAdapter);
-        addToLog("SYSTEM: تم تشغيل بروتوكول حماية الواتساب.");
+        addToLog("SYSTEM: بروتوكول الحماية جاهز.");
     }
 
     private void setupInitialState() {
         isActive = ShieldStatus.isProtectionActive(this);
-        lastKnownCount = ShieldStatus.getBlockedCount(this); 
+        refreshStats();
         updateUI(isActive, false);
+        
+        // إذا كان الدرع نشطاً، نتأكد من تشغيل الخدمة الأمامية
+        if (isActive) startShieldService();
     }
 
     private void toggleShield() {
         isActive = !isActive;
         ShieldStatus.setProtectionState(this, isActive);
+        
+        if (isActive) {
+            startShieldService();
+            addToLog("PROTOCOL: تم تفعيل الخدمة الدائمة في الخلفية.");
+        } else {
+            stopShieldService();
+            addToLog("PROTOCOL: تم إيقاف الخدمة، النظام في وضع الاستعداد.");
+        }
+
         if (vibrator != null) vibrator.vibrate(isActive ? 70 : 30);
         updateUI(isActive, true);
-        addToLog(isActive ? "PROTOCOL: تم تفعيل درع الحماية." : "PROTOCOL: الحماية في وضع الاستعداد.");
+    }
+
+    private void startShieldService() {
+        Intent serviceIntent = new Intent(this, ShieldForegroundService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+    }
+
+    private void stopShieldService() {
+        Intent serviceIntent = new Intent(this, ShieldForegroundService.class);
+        stopService(serviceIntent);
+    }
+
+    private void requestBatteryOptimizationIgnore() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            }
+        }
+    }
+
+    private void startCounterMonitor() {
+        handler.removeCallbacksAndMessages(null);
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                int currentCount = ShieldStatus.getBlockedCount(MainActivity.this);
+                if (currentCount > lastKnownCount) {
+                    int diff = currentCount - lastKnownCount;
+                    addToLog("INTERCEPT: تم رصد وإحباط " + diff + " محاولة تجسس جديدة.");
+                    txtBlockedCount.setText(String.valueOf(currentCount));
+                    if (vibrator != null) vibrator.vibrate(40);
+                    lastKnownCount = currentCount;
+                }
+                handler.postDelayed(this, 1500);
+            }
+        }, 1500);
     }
 
     private void addToLog(String message) {
@@ -180,7 +234,6 @@ public class MainActivity extends AppCompatActivity {
         int colorRed = Color.parseColor("#FF5252");
         int colorGreen = Color.parseColor("#4CAF50");
         int targetColor = active ? colorGreen : colorRed;
-
         txtStatusMain.setText(active ? "الواتساب محمي" : "الواتساب غير محمي");
         btnStart.setText(active ? "إيقاف الدرع النشط" : "تفعيل الدرع النشط");
 
@@ -212,21 +265,10 @@ public class MainActivity extends AppCompatActivity {
         colorAnimation.start();
     }
 
-    private void startCounterMonitor() {
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                int currentCount = ShieldStatus.getBlockedCount(MainActivity.this);
-                if (currentCount > lastKnownCount) {
-                    int diff = currentCount - lastKnownCount;
-                    addToLog("INTERCEPT: تم إحباط محاولة حظر حسابك (تقرير أمني) عدد: " + diff);
-                    txtBlockedCount.setText(String.valueOf(currentCount));
-                    if (vibrator != null) vibrator.vibrate(40);
-                    lastKnownCount = currentCount;
-                }
-                handler.postDelayed(this, 1000);
-            }
-        }, 1000);
+    @Override
+    protected void onPause() {
+        super.onPause();
+        handler.removeCallbacksAndMessages(null); // توقف تحديث الواجهة فقط لتوفير البطارية
     }
 
     @Override
