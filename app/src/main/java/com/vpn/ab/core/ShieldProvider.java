@@ -17,9 +17,14 @@ public class ShieldProvider extends ContentProvider {
         // ننشئ جدولاً في الذاكرة يحتوي على الحالة والعداد
         MatrixCursor cursor = new MatrixCursor(new String[]{"is_active", "blocked_count"});
         
-        // نجلب البيانات من ShieldStatus الذي كتبناه سابقاً
-        boolean active = ShieldStatus.isProtectionActive(getContext());
-        int count = ShieldStatus.getBlockedCount(getContext());
+        // --- صمام الأمان المزدوج ---
+        // 1. هل الدرع نشط؟
+        // 2. هل النسخة مفعلة بريميوم؟ (isLicenseValid)
+        boolean isLicensed = ShieldStatus.isLicenseValid(getContext());
+        boolean active = isLicensed && ShieldStatus.isProtectionActive(getContext());
+        
+        // إذا لم يكن مرخصاً، نرسل العداد كـ 0 دائماً لحماية مجهودك
+        int count = isLicensed ? ShieldStatus.getBlockedCount(getContext()) : 0;
         
         cursor.addRow(new Object[]{active ? 1 : 0, count});
         return cursor;
@@ -27,9 +32,19 @@ public class ShieldProvider extends ContentProvider {
 
     @Override
     public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
+        // التأكد من وجود ترخيص قبل السماح للواتساب بالتفاعل مع العداد
+        if (!ShieldStatus.isLicenseValid(getContext())) {
+            return 0; 
+        }
+
         // عندما يريد الواتساب زيادة العداد، سيرسل تحديثاً هنا
         if (values != null && values.containsKey("increment")) {
             ShieldStatus.incrementBlockedCount(getContext());
+            
+            // إرسال إشعار للنظام بأن البيانات تغيرت لتحديث الواجهة في MainActivity فوراً
+            if (getContext() != null) {
+                getContext().getContentResolver().notifyChange(uri, null);
+            }
             return 1;
         }
         return 0;
