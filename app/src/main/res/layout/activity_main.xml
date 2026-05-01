@@ -21,9 +21,9 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:fontFamily="monospace"
-            android:text="CORE_SHIELD_V1.0"
+            android:text="CORE_SHIELD_V1.1_PRO"
             android:textColor="#00FFFF"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:letterSpacing="0.1" />
 
         <View
@@ -37,31 +37,33 @@
             android:id="@+id/txtStatusMini"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="STANDBY"
-            android:textColor="#8E8E93"
+            android:text="ENCRYPTED"
+            android:textColor="#4CAF50"
             android:textSize="10sp" />
     </LinearLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/shieldArea"
-        android:layout_width="220dp"
-        android:layout_height="220dp"
-        android:layout_marginTop="32dp"
+        android:layout_width="240dp"
+        android:layout_height="240dp"
+        android:layout_marginTop="24dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/headerLayout">
 
-        <View
-            android:id="@+id/viewGlow"
+        <com.airbnb.android.lottie.LottieAnimationView
+            android:id="@+id/lottieShield"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@drawable/bg_shield_glow"
-            android:alpha="0.3" />
+            app:lottie_autoPlay="false"
+            app:lottie_loop="true"
+            app:lottie_rawRes="@raw/shield_pulse" 
+            app:lottie_speed="0.8" />
 
         <ImageView
             android:id="@+id/imgStatus"
-            android:layout_width="120dp"
-            android:layout_height="120dp"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
             android:src="@android:drawable/ic_lock_idle_lock"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -75,9 +77,8 @@
         android:id="@+id/txtStatusMain"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
         android:fontFamily="sans-serif-black"
-        android:text="النظام في انتظار الأوامر"
+        android:text="بروتوكول الحماية جاهز"
         android:textColor="#FFFFFF"
         android:textSize="22sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -88,7 +89,7 @@
         android:id="@+id/statsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="20dp"
         android:orientation="horizontal"
         app:layout_constraintTop_toBottomOf="@id/txtStatusMain">
 
@@ -98,7 +99,7 @@
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
             app:cardBackgroundColor="#101218"
-            app:cardCornerRadius="16dp"
+            app:cardCornerRadius="14dp"
             app:cardElevation="0dp">
             <LinearLayout
                 android:layout_width="match_parent"
@@ -119,8 +120,7 @@
                     android:text="0"
                     android:textColor="#00FFFF"
                     android:textSize="26sp"
-                    android:fontFamily="sans-serif-condensed-light"
-                    android:textStyle="bold" />
+                    android:fontFamily="monospace" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -130,7 +130,7 @@
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             app:cardBackgroundColor="#101218"
-            app:cardCornerRadius="16dp"
+            app:cardCornerRadius="14dp"
             app:cardElevation="0dp">
             <LinearLayout
                 android:layout_width="match_parent"
@@ -141,18 +141,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="رصد التهديدات"
+                    android:text="الرصد اللحظي"
                     android:textColor="#636366"
                     android:textSize="11sp" />
                 <TextView
                     android:id="@+id/txtThreatCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="#FF3B30"
-                    android:textSize="26sp"
-                    android:fontFamily="sans-serif-condensed-light"
-                    android:textStyle="bold" />
+                    android:text="ACTIVE"
+                    android:textColor="#4CAF50"
+                    android:textSize="18sp"
+                    android:fontFamily="monospace" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
     </LinearLayout>
@@ -161,18 +160,19 @@
         android:id="@+id/terminalLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="20dp"
         android:fontFamily="monospace"
-        android:text=">_ SECURITY_CONSOLE_STREAM"
+        android:text=">_ ENCRYPTED_LOG_STREAM"
         android:textColor="#00FF41"
         android:textSize="10sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/statsContainer" />
 
     <androidx.cardview.widget.CardView
+        android:id="@+id/cardLog"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:layout_marginBottom="16dp"
         app:cardBackgroundColor="#000000"
         app:cardCornerRadius="8dp"
@@ -180,30 +180,22 @@
         app:layout_constraintBottom_toTopOf="@+id/btnStart"
         app:layout_constraintTop_toBottomOf="@id/terminalLabel">
 
-        <ScrollView
-            android:id="@+id/logScrollView"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerSecurityLog"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:padding="10dp"
-            android:scrollbarThumbVertical="@android:color/transparent">
-            <TextView
-                android:id="@+id/txtSecurityLog"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="[INFO] System standby...\n[INFO] Awaiting protocol activation..."
-                android:textColor="#00FF41"
-                android:textSize="11sp"
-                android:lineSpacingExtra="4dp" />
-        </ScrollView>
+            android:clipToPadding="false"
+            android:scrollbarThumbVertical="@android:color/transparent" />
+
     </androidx.cardview.widget.CardView>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnStart"
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:layout_marginBottom="8dp"
-        android:text="تفعيل بروتوكول الحماية"
+        android:layout_marginBottom="4dp"
+        android:text="بدء نظام العزل"
         android:textColor="#050608"
         android:textSize="16sp"
         android:textStyle="bold"
@@ -211,7 +203,6 @@
         app:cornerRadius="12dp"
         app:icon="@android:drawable/ic_lock_power_off"
         app:iconGravity="textStart"
-        app:iconPadding="12dp"
         app:iconTint="#050608"
         app:layout_constraintBottom_toBottomOf="parent" />
 
