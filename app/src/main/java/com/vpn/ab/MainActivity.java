@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         updateUI(isActive, true);
-        addToLog(isActive ? "PROTOCOL: تم تفعيل العزل السيبراني." : "PROTOCOL: تم إيقاف الحماية، النظام في وضع الاستعداد.");
+        addToLog(isActive ? "PROTOCOL: تم تفعيل درع حماية الواتساب." : "PROTOCOL: تم إيقاف الحماية، النظام في وضع الاستعداد.");
     }
 
     // دالة إضافة سطر للسجل الأمني
@@ -113,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
         int colorGreen = Color.parseColor("#4CAF50");
         int targetColor = active ? colorGreen : colorRed;
 
-        txtStatusMain.setText(active ? "النظام محمي" : "النظام معزول");
+        txtStatusMain.setText(active ? "الواتساب محمي" : "الواتساب غير محمي");
         txtDescription.setText(active ? 
             "درع الحماية يعمل الآن. واتساب متصل عبر قناة آمنة ومراقبة." : 
             "درع الحماية متوقف حالياً. واتساب لن يرسل أو يستقبل أي بيانات لضمان خصوصيتك.");
@@ -171,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
                 // إذا زاد العداد، نقوم بتسجيل "تقرير إحباط" في الشاشة الأمنية
                 if (currentCount > lastKnownCount) {
                     int diff = currentCount - lastKnownCount;
-                    addToLog("INTERCEPT: تم إحباط محاولة تمرير تقرير أمني (integrity) عدد: " + diff);
+                    addToLog("INTERCEPT: تم إحباط محاولة تمرير تقرير لشركة الواتساب لحظر حسابك (تقرير أمني) عدد: " + diff);
                     
                     // تحديث رقم العداد في الواجهة
                     txtBlockedCount.setText(String.valueOf(currentCount));
