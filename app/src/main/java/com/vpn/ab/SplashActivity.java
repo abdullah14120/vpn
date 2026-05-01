@@ -24,7 +24,7 @@ public class SplashActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
-        // تأثير نبض خفيف للشعار
+        // تأثير نبض خفيف للشعار لتعزيز المظهر البصري
         ImageView logo = findViewById(R.id.imgLogo);
         if (logo != null) {
             Animation anim = new AlphaAnimation(0.4f, 1.0f);
@@ -34,44 +34,64 @@ public class SplashActivity extends AppCompatActivity {
             logo.startAnimation(anim);
         }
 
-        // إعطاء وقت قصير (1.5 ثانية) لإظهار الشعار ثم الفحص
+        // إعطاء وقت كافٍ (1.5 ثانية) لإظهار الهوية البصرية ثم بدء الفحص
         new Handler(Looper.getMainLooper()).postDelayed(this::checkStatus, 1500);
     }
 
     private void checkStatus() {
-        // 1. فحص التفعيل المحلي (عن طريق الكلاس المركزي لضمان الدقة)
+        // 1. فحص التفعيل المحلي (إذا كان الجهاز قد تم تفعيله سابقاً)
         if (ShieldStatus.isLicenseValid(this)) {
             goToMain();
             return;
         }
 
-        // 2. فحص التفعيل من السيرفر (في حال تم تفعيل المستخدم وهو مغلق التطبيق)
+        // 2. إذا لم يوجد تفعيل محلي، نفحص حالته في السيرفر
         String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users").child(androidId);
+        DatabaseReference rootRef = FirebaseDatabase.getInstance().getReference();
 
-        ref.addListenerForSingleValueEvent(new ValueEventListener() {
+        // فحص عقدة المستخدمين أولاً (Users)
+        rootRef.child("Users").child(androidId).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
-                    // نتحقق من القيمة is_activated كما في تطبيق الأدمن
-                    Boolean serverActive = snapshot.child("is_activated").getValue(Boolean.class);
-                    
-                    if (Boolean.TRUE.equals(serverActive)) {
-                        // حفظ التفعيل محلياً لكي لا يحتاج للإنترنت المرة القادمة
+                    Boolean isActivated = snapshot.child("is_activated").getValue(Boolean.class);
+                    if (Boolean.TRUE.equals(isActivated)) {
+                        // المستخدم مفعل في السيرفر، نحفظ التفعيل محلياً وندخله
                         ShieldStatus.activateLicenseLocally(SplashActivity.this);
                         goToMain();
                     } else {
-                        goToActivation();
+                        // المستخدم موجود لكنه غير مفعل، نذهب للرئيسية لإظهار واجهة "قيد المراجعة"
+                        goToMain();
                     }
                 } else {
-                    // مستخدم جديد تماماً
+                    // المستخدم غير موجود في عقدة Users، نفحص هل لديه طلب معلق في Requests؟
+                    checkIfHasPendingRequest(rootRef, androidId);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // في حال خطأ الاتصال، نرسله للتفعيل كإجراء احترازي
+                goToActivation();
+            }
+        });
+    }
+
+    private void checkIfHasPendingRequest(DatabaseReference rootRef, String androidId) {
+        rootRef.child("Requests").child(androidId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    // المستخدم أرسل طلباً بالفعل وهو بانتظار الأدمن
+                    goToMain();
+                } else {
+                    // مستخدم جديد كلياً لا يملك تفعيلاً ولا طلباً
                     goToActivation();
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // في حال انقطاع النت ولم يكن مفعل محلياً، نطلب التفعيل كإجراء حماية
                 goToActivation();
             }
         });
