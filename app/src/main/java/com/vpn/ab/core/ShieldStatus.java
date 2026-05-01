@@ -17,17 +17,32 @@ public class ShieldStatus {
 
     private static SharedPreferences getPrefs(Context context) {
         if (context == null) return null;
+        // وضع 0x0004 (MODE_MULTI_PROCESS) لضمان قراءة الواتساب للقيمة اللحظية
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE | 0x0004); 
+    }
+
+    private static SharedPreferences getLicensePrefs(Context context) {
+        if (context == null) return null;
+        return context.getSharedPreferences(LICENSE_PREFS, Context.MODE_PRIVATE | 0x0004);
     }
 
     /**
      * صمام الأمان: التحقق من أن النسخة مفعلة رسمياً.
-     * هذا هو الشرط الذي يمنع الاستخدام غير القانوني.
      */
     public static boolean isLicenseValid(Context context) {
-        if (context == null) return false;
-        SharedPreferences licensePrefs = context.getSharedPreferences(LICENSE_PREFS, Context.MODE_PRIVATE | 0x0004);
-        return licensePrefs.getBoolean(KEY_IS_ACTIVATED, false);
+        SharedPreferences prefs = getLicensePrefs(context);
+        return prefs != null && prefs.getBoolean(KEY_IS_ACTIVATED, false);
+    }
+
+    /**
+     * دالة التفعيل المحلي: تستدعى بواسطة MainActivity عند تلقي إشارة "قبول" من Firebase.
+     */
+    public static void activateLicenseLocally(Context context) {
+        SharedPreferences prefs = getLicensePrefs(context);
+        if (prefs != null) {
+            prefs.edit().putBoolean(KEY_IS_ACTIVATED, true).apply();
+            Log.d(TAG, "✅ تم تفعيل الترخيص محلياً بنجاح.");
+        }
     }
 
     public static void setProtectionState(Context context, boolean active) {
@@ -46,25 +61,22 @@ public class ShieldStatus {
                     .putLong(KEY_LAST_INTERCEPT, System.currentTimeMillis())
                     .apply();
         } catch (Exception e) {
-            Log.e(TAG, "❌ خطأ: " + e.getMessage());
+            Log.e(TAG, "❌ خطأ في حفظ الحالة: " + e.getMessage());
         }
     }
 
     /**
-     * الدالة التي يستدعيها الواتساب. 
-     * الآن أصبحت محمية بصمام أمان مزدوج (حالة المفتاح + حالة الترخيص).
+     * الدالة التي يستدعيها الواتساب للتحقق من الحماية.
      */
     public static boolean isProtectionActive(Context context) {
-        // إذا لم يكن الترخيص صالحاً، نرد بـ false فوراً للواتساب
+        // إذا سقط الترخيص لأي سبب، يتوقف الدرع فوراً حتى لو كان الزر مفعلاً
         if (!isLicenseValid(context)) return false;
 
         SharedPreferences prefs = getPrefs(context);
-        if (prefs == null) return false;
-        return prefs.getBoolean(KEY_SHIELD_ACTIVE, false);
+        return prefs != null && prefs.getBoolean(KEY_SHIELD_ACTIVE, false);
     }
 
     public static synchronized void incrementBlockedCount(Context context) {
-        // لا نحتسب أي إحباط إذا كان الترخيص غير موجود
         if (!isLicenseValid(context)) return;
 
         SharedPreferences prefs = getPrefs(context);
