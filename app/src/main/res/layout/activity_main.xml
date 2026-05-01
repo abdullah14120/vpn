@@ -21,7 +21,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:fontFamily="monospace"
-            android:text="CORE_SHIELD_V1.1_PRO"
+            android:text="CORE_SHIELD_V1.1_STABLE"
             android:textColor="#00FFFF"
             android:textSize="11sp"
             android:letterSpacing="0.1" />
@@ -30,15 +30,16 @@
             android:id="@+id/statusIndicator"
             android:layout_width="8dp"
             android:layout_height="8dp"
-            android:background="@drawable/bg_circle_green"
-            android:layout_marginEnd="8dp"/>
+            android:background="@android:drawable/presence_online"
+            android:layout_marginEnd="8dp"
+            app:backgroundTint="#8E8E93"/>
 
         <TextView
             android:id="@+id/txtStatusMini"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ENCRYPTED"
-            android:textColor="#4CAF50"
+            android:text="STANDBY"
+            android:textColor="#8E8E93"
             android:textSize="10sp" />
     </LinearLayout>
 
@@ -51,25 +52,25 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/headerLayout">
 
-        <com.airbnb.android.lottie.LottieAnimationView
-            android:id="@+id/lottieShield"
+        <View
+            android:id="@+id/viewGlow"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:lottie_autoPlay="false"
-            app:lottie_loop="true"
-            app:lottie_rawRes="@raw/shield_pulse" 
-            app:lottie_speed="0.8" />
+            android:background="@android:drawable/screen_background_light_transparent"
+            android:visibility="invisible"
+            android:alpha="0.2"
+            app:backgroundTint="#00FFFF" />
 
         <ImageView
             android:id="@+id/imgStatus"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:src="@android:drawable/ic_lock_idle_lock"
+            android:layout_width="110dp"
+            android:layout_height="110dp"
+            android:src="@android:drawable/ic_lock_power_off"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="#00FFFF" />
+            app:tint="#FF3B30" />
             
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -78,9 +79,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="sans-serif-black"
-        android:text="بروتوكول الحماية جاهز"
+        android:text="النظام في انتظار الأوامر"
         android:textColor="#FFFFFF"
-        android:textSize="22sp"
+        android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/shieldArea" />
@@ -141,14 +142,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="الرصد اللحظي"
+                    android:text="الحالة"
                     android:textColor="#636366"
                     android:textSize="11sp" />
                 <TextView
                     android:id="@+id/txtThreatCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="ACTIVE"
+                    android:text="STABLE"
                     android:textColor="#4CAF50"
                     android:textSize="18sp"
                     android:fontFamily="monospace" />
@@ -195,11 +196,11 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:layout_marginBottom="4dp"
-        android:text="بدء نظام العزل"
+        android:text="تفعيل بروتوكول العزل"
         android:textColor="#050608"
         android:textSize="16sp"
         android:textStyle="bold"
-        app:backgroundTint="#00FFFF"
+        app:backgroundTint="#FF3B30"
         app:cornerRadius="12dp"
         app:icon="@android:drawable/ic_lock_power_off"
         app:iconGravity="textStart"
