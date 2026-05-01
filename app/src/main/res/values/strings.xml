@@ -2,18 +2,19 @@
 <resources>
     <string name="app_name">درع حماية الواتساب</string>
 
-    <string name="activation_title">نظام الحماية مقيد</string>
-    <string name="activation_subtitle">يرجى تفعيل الترخيص للوصول إلى محرك الدرع النشط</string>
+    <string name="activation_title">نظام حماية الواتساب غير مفّعل</string>
+    <string name="activation_subtitle">يرجى تفعيل الترخيص للوصول إلى درع حماية الواتساب</string>
     <string name="device_id_label">معرف الجهاز الفريد (Device ID):</string>
+    <string name="wait_label">يرجى الإنتظار...</string>
+    <string name="phone_hint">أدخل رقم الهاتف لتأكيد التفعيل</string>
     <string name="copy_id">نسخ المعرف</string>
     <string name="request_activation">إرسال طلب تفعيل</string>
-    <string name="contact_info">@Abdullah_AlTamimi</string>
-    <string name="copyright_text">🛡️ SHIELD CORE | جميع الحقوق محفوظة لـ Abdullah Al-Tamimi</string>
+    <string name="loading_request">جاري إرسال طلبك للسيرفر...</string>
     
     <string name="id_copied">تم نسخ المعرف بنجاح</string>
-    <string name="enter_name_error">يرجى إدخال اسمك لتمييز طلبك لدى الأدمن</string>
+    <string name="enter_name_error">يرجى إدخال رقم الهاتف لتأكيد التفعيل</string>
     <string name="request_sent_success">تم إرسال طلبك للأدمن بنجاح. يرجى الانتظار للموافقة.</string>
-    <string name="request_pending">طلبك قيد المراجعة حالياً</string>
+    <string name="request_pending">⏳ طلبك قيد المراجعة حالياً...</string>
     <string name="request_failed">فشل الإرسال، تحقق من اتصال الإنترنت</string>
 
     <string name="status_protected">الواتساب محمي</string>
@@ -27,4 +28,9 @@
 
     <string name="loading_core">INITIALIZING SHIELD CORE...</string>
     <string name="license_check">جاري فحص التراخيص...</string>
+
+    <string name="contact_prefix">للتفعيل المباشر، تواصل عبر X :</string>
+    <string name="contact_info">@abdullah_tamemi</string>
+    <string name="contact_number">+967 770034578</string>
+    <string name="copyright_text">🛡️ SHIELD CORE | جميع الحقوق محفوظة لـ Abdullah Al-Tamimi</string>
 </resources>
