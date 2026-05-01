@@ -146,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
             recyclerSecurityLog.setLayoutManager(new LinearLayoutManager(this));
             recyclerSecurityLog.setAdapter(logAdapter);
         }
-        addToLog("SYSTEM: تم تفعيل بروتوكول الرصد الأمني.");
+        addToLog("SYSTEM: تم تفعيل بروتوكول حماية الواتساب.");
     }
 
     private void refreshStats() {
@@ -198,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 showShieldUI(true);
                                 setupInitialState();
-                                addToLog("SYSTEM: تم استقبال تصريح النشاط.. الدرع مفعّل.");
+                                addToLog("SYSTEM: تم استقبال تصريح النشاط.. درع حماية الواتساب مغعل.");
                             });
                         }
                     } else if (ShieldStatus.isLicenseValid(MainActivity.this)) {
@@ -227,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
         
         if (isActive) {
             startShieldService();
-            addToLog("PROTOCOL: تم تشغيل الخدمة الدائمة.");
+            addToLog("PROTOCOL: تم تشغيل درع حماية الواتساب الدائمة.");
         } else {
             stopShieldService();
             addToLog("PROTOCOL: النظام في وضع الاستعداد.");
@@ -258,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
                 int currentCount = ShieldStatus.getBlockedCount(MainActivity.this);
                 if (currentCount > lastKnownCount) {
                     int diff = currentCount - lastKnownCount;
-                    addToLog("INTERCEPT: تم إحباط " + diff + " محاولة تجسس جديدة.");
+                    addToLog("INTERCEPT: تم إحباط " + diff + " محاولة تمرير تقرير لشركة الواتساب لحظر حسابك");
                     txtBlockedCount.setText(String.valueOf(currentCount));
                     if (vibrator != null) vibrator.vibrate(40);
                     lastKnownCount = currentCount;
