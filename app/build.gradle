@@ -1,5 +1,7 @@
 plugins {
     id 'com.android.application'
+    // إضافة بلجن جوجل هنا هو الطريقة الأصح والأحدث
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -15,13 +17,13 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
-        // مهم جداً: لضمان دعم التوقيع المشترك والـ Multi-Process
+        // دعم التوقيع المشترك والعمليات المتعددة
         multiDexEnabled true
     }
 
     buildTypes {
         release {
-            // تفعيل الـ Minify في النسخة النهائية لتقليل حجم التطبيق وحماية الكود
+            // حماية الكود وتقليل الحجم
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -37,41 +39,31 @@ android {
     }
 
     buildFeatures {
-        // تفعيل ViewBinding إذا أردت استخدامه لاحقاً لتسهيل الربط
         viewBinding true
     }
 }
 
 dependencies {
-    // المكتبات الأساسية لواجهات AndroidX
+    // المكتبات الأساسية
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.core:core-ktx:1.12.0'
-    
-    // المكتبة الملك لـ Material Design (التي توفر الأزرار والحواف المنحنية)
     implementation 'com.google.android.material:material:1.11.0'
-    
-    // ConstraintLayout للتحكم الدقيق في أماكن العناصر (مثل التصميم الذي أرسلته لك)
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    
-    // CardView لتصميم البطاقات الأمنية بشكل عصري
     implementation 'androidx.cardview:cardview:1.0.0'
 
-    // مكتبة اختيارية لإضافة أنيميشن نبضات الدرع (Shield Pulse)
+    // مكتبة الأنيميشن للدرع
     implementation 'com.airbnb.android:lottie:6.1.0'
 
-    // دعم Multi-Dex للأجهزة القديمة
+    // دعم Multi-Dex
     implementation 'androidx.multidex:multidex:2.0.1'
 
+    // مكتبات Firebase (التفعيل والصلاحيات)
     implementation platform('com.google.firebase:firebase-bom:32.7.0')
     implementation 'com.google.firebase:firebase-database'
+    implementation 'com.google.firebase:firebase-analytics'
 
     // أدوات الاختبار
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-
-    }
-
-apply plugin: 'com.google.gms.google-services'
-
 }
