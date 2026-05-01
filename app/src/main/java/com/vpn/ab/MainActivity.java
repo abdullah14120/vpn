@@ -77,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
         recyclerSecurityLog.setAdapter(logAdapter);
         
         // رسائل ترحيبية احترافية عند التشغيل
-        addToLog("SYSTEM: تم تشغيل بروتوكول الحماية النشط.");
+        addToLog("SYSTEM: تم تشغيل بروتوكول حماية الواتساب النشط.");
         addToLog("SYSTEM: حالة الترخيص: [مفعل - نسخة بريميوم].");
         addToLog("SYSTEM: في انتظار رصد تهديدات من حزمة الواتساب...");
     }
