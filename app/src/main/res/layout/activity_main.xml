@@ -75,7 +75,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="تقارير أمنية محبطة"
+                    android:text="محاولات حظر تم إحباطها"
                     android:textColor="#636366"
                     android:textSize="12sp" />
 
@@ -110,7 +110,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:fontFamily="monospace"
-        android:text=">_ استعراض التهديدات النشطة"
+        android:text=">_ استعراض جدار الحماية للواتساب"
         android:textColor="#00FF41"
         android:textSize="10sp"
         app:layout_constraintStart_toStartOf="parent"
