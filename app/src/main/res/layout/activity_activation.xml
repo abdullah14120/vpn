@@ -24,7 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:fontFamily="sans-serif-black"
-        android:text="نظام الحماية مقيد"
+        android:text="التطبيق غير مفعل"
         android:textColor="#FFFFFF"
         android:textSize="22sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -37,7 +37,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center"
-        android:text="يرجى تفعيل الترخيص للوصول إلى محرك الدرع النشط"
+        android:text="يرجى تفعيل الترخيص للبدء في حماية الواتساب"
         android:textColor="#8E8E93"
         android:textSize="13sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -79,7 +79,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="LOADING_ID..."
+                    android:text="يرجى الإنتظار..."
                     android:textColor="#FFFFFF"
                     android:textSize="14sp"
                     android:fontFamily="monospace" />
@@ -101,7 +101,7 @@
         android:layout_height="56dp"
         android:layout_marginTop="16dp"
         android:background="@drawable/bg_edittext_dark"
-        android:hint="أدخل اسمك أو كود التفعيل"
+        android:hint="أدخل رقم الهاتف"
         android:paddingHorizontal="16dp"
         android:textColor="#FFFFFF"
         android:textColorHint="#444444"
@@ -133,7 +133,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="للتفعيل المباشر، تواصل عبر التليجرام:"
+            android:text="للتفعيل المباشر، تواصل : 770034578"
             android:textColor="#636366"
             android:textSize="11sp" />
 
