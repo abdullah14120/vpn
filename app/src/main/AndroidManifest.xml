@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.vpn.ab">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -12,7 +19,8 @@
         android:label="درع حماية الواتساب"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Shield">
+        android:theme="@style/Theme.Shield"
+        android:requestLegacyExternalStorage="true">
 
         <activity
             android:name=".SplashActivity"
@@ -26,12 +34,32 @@
 
         <activity
             android:name=".MainActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:launchMode="singleTop" />
 
         <activity
             android:name=".ActivationActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <service
+            android:name=".core.ShieldForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Security and Anti-Interception protection for WhatsApp" />
+        </service>
+
+        <receiver
+            android:name=".core.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name=".core.ShieldProvider"
@@ -43,7 +71,7 @@
 
     <queries>
         <package android:name="com.whatsapp" />
-        <package android:name="com.target.app" />
+        <package android:name="com.whatsapp.w4b" />
         <package android:name="com.fixwhatsapp" />
     </queries>
 
