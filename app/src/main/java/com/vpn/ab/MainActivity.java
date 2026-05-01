@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Vibrator;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -17,7 +18,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.airbnb.android.lottie.LottieAnimationView;
 import com.google.android.material.button.MaterialButton;
 import com.vpn.ab.core.LogAdapter;
 import com.vpn.ab.core.ShieldStatus;
@@ -30,14 +30,13 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
-    // عناصر الواجهة المحدثة
-    private View statusIndicator;
+    // عناصر الواجهة الأساسية
+    private View statusIndicator, viewGlow;
     private ImageView imgStatus;
     private TextView txtStatusMain, txtStatusMini, txtBlockedCount, txtThreatCount;
     private MaterialButton btnStart;
     
-    // المكونات الجديدة (Lottie & RecyclerView)
-    private LottieAnimationView lottieShield;
+    // السجل الأمني (RecyclerView)
     private RecyclerView recyclerSecurityLog;
     private LogAdapter logAdapter;
     private List<String> logList = new ArrayList<>();
@@ -57,28 +56,25 @@ public class MainActivity extends AppCompatActivity {
 
         btnStart.setOnClickListener(v -> toggleShield());
         
-        // مراقبة العدادات وتحديث السجل الحي
+        // بدء مراقبة النظام وتحديث العدادات
         startSystemMonitoring();
     }
 
     private void initViews() {
         statusIndicator = findViewById(R.id.statusIndicator);
+        viewGlow = findViewById(R.id.viewGlow); // خلفية التوهج
         imgStatus = findViewById(R.id.imgStatus);
         txtStatusMain = findViewById(R.id.txtStatusMain);
         txtStatusMini = findViewById(R.id.txtStatusMini);
         txtBlockedCount = findViewById(R.id.txtBlockedCount);
         txtThreatCount = findViewById(R.id.txtThreatCount);
         btnStart = findViewById(R.id.btnStart);
-        
-        // ربط المكونات المضافة حديثاً
-        lottieShield = findViewById(R.id.lottieShield);
         recyclerSecurityLog = findViewById(R.id.recyclerSecurityLog);
         
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
     }
 
     private void setupRecyclerView() {
-        // إعداد المحول والقائمة للسجل الأمني
         logAdapter = new LogAdapter(logList);
         recyclerSecurityLog.setLayoutManager(new LinearLayoutManager(this));
         recyclerSecurityLog.setAdapter(logAdapter);
@@ -87,18 +83,21 @@ public class MainActivity extends AppCompatActivity {
     private void setupInitialState() {
         isActive = ShieldStatus.isProtectionActive(this);
         updateUI(isActive, false);
-        addToLog("SYSTEM: Initialize Core Shield...");
-        addToLog("SYSTEM: Identity Verified [" + android.os.Build.MODEL + "]");
+        addToLog("SYSTEM: Core Engine Initialized.");
+        addToLog("SYSTEM: Stability Mode Active (Static UI).");
     }
 
     private void toggleShield() {
         isActive = !isActive;
         ShieldStatus.setProtectionState(this, isActive);
         
-        if (vibrator != null) vibrator.vibrate(isActive ? 100 : 50);
+        if (vibrator != null) {
+            // اهتزاز مخصص للتشغيل والإيقاف
+            vibrator.vibrate(isActive ? 80 : 40);
+        }
 
         updateUI(isActive, true);
-        addToLog(isActive ? "PROTOCOL: Alpha-Shield Engaged" : "PROTOCOL: System Isolation Active");
+        addToLog(isActive ? "PROTOCOL: Shield Engaged." : "PROTOCOL: System Standby.");
     }
 
     private void updateUI(boolean active, boolean animate) {
@@ -112,20 +111,22 @@ public class MainActivity extends AppCompatActivity {
         txtStatusMini.setTextColor(active ? Color.GREEN : dimGray);
         btnStart.setText(active ? "تعطيل بروتوكول الحماية" : "تفعيل بروتوكول الحماية");
 
+        // إدارة تأثير التوهج (بديل Lottie)
         if (active) {
-            lottieShield.playAnimation();
-            lottieShield.setVisibility(View.VISIBLE);
+            viewGlow.setVisibility(View.VISIBLE);
+            viewGlow.setAlpha(0.4f);
             statusIndicator.setBackgroundTintList(ColorStateList.valueOf(Color.GREEN));
+            if (animate) startPulseAnimation(); // نبض يدوي عند التشغيل
         } else {
-            lottieShield.cancelAnimation();
-            lottieShield.setVisibility(View.INVISIBLE);
+            viewGlow.setVisibility(View.INVISIBLE);
             statusIndicator.setBackgroundTintList(ColorStateList.valueOf(Color.GRAY));
         }
 
         if (animate) {
             animateColorChange(btnStart, targetColor);
             animateColorChange(imgStatus, targetColor);
-            imgStatus.animate().rotationY(active ? 360f : 0f).setDuration(500).start();
+            // دوران بسيط للأيقونة عند التبديل
+            imgStatus.animate().rotationYBy(360f).setDuration(600).start();
         } else {
             btnStart.setBackgroundTintList(ColorStateList.valueOf(targetColor));
             imgStatus.setImageTintList(ColorStateList.valueOf(targetColor));
@@ -136,19 +137,24 @@ public class MainActivity extends AppCompatActivity {
                 android.R.drawable.ic_lock_power_off);
     }
 
+    // تأثير نبضي يدوي للأيقونة لتعويض غياب Lottie
+    private void startPulseAnimation() {
+        imgStatus.animate()
+                .scaleX(1.15f)
+                .scaleY(1.15f)
+                .setDuration(300)
+                .setInterpolator(new AccelerateDecelerateInterpolator())
+                .withEndAction(() -> imgStatus.animate().scaleX(1f).scaleY(1f).setDuration(300).start())
+                .start();
+    }
+
     private void addToLog(String message) {
         String timeStamp = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
         String entry = "> [" + timeStamp + "] " + message;
 
-        // إضافة السطر الجديد في أعلى القائمة لتسهيل الرؤية
         logList.add(0, entry);
-        
-        // الحفاظ على أداء التطبيق عبر مسح الأسطر القديمة جداً
-        if (logList.size() > 50) {
-            logList.remove(logList.size() - 1);
-        }
+        if (logList.size() > 50) logList.remove(logList.size() - 1);
 
-        // تحديث الواجهة من خلال الـ Adapter
         runOnUiThread(() -> {
             logAdapter.notifyItemInserted(0);
             recyclerSecurityLog.scrollToPosition(0);
@@ -160,14 +166,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 int blocked = ShieldStatus.getBlockedCount(MainActivity.this);
-                
-                // تحديث العداد بتأثير الحركة إذا تغيرت القيمة
                 String currentStr = txtBlockedCount.getText().toString();
                 int currentVal = currentStr.isEmpty() ? 0 : Integer.parseInt(currentStr);
                 
                 if (currentVal != blocked) {
                     animateNumber(txtBlockedCount, currentVal, blocked);
-                    addToLog("INTERCEPT: Security Packet Blocked");
+                    addToLog("INTERCEPT: Security Packet Blocked.");
                     if (vibrator != null) vibrator.vibrate(20);
                 }
                 
