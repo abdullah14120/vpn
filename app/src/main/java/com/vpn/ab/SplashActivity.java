@@ -24,7 +24,7 @@ public class SplashActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
-        // تأثير نبض خفيف للشعار لتعزيز المظهر البصري
+        // تأثير الحركة للشعار
         ImageView logo = findViewById(R.id.imgLogo);
         if (logo != null) {
             Animation anim = new AlphaAnimation(0.4f, 1.0f);
@@ -34,65 +34,47 @@ public class SplashActivity extends AppCompatActivity {
             logo.startAnimation(anim);
         }
 
-        // إعطاء وقت كافٍ (1.5 ثانية) لإظهار الهوية البصرية ثم بدء الفحص
+        // بدء الفحص بعد 1.5 ثانية
         new Handler(Looper.getMainLooper()).postDelayed(this::checkStatus, 1500);
     }
 
     private void checkStatus() {
-        // 1. فحص التفعيل المحلي (إذا كان الجهاز قد تم تفعيله سابقاً)
+        // 1. الفحص المحلي (لتوفير استهلاك البيانات وسرعة الفتح للمشتركين)
         if (ShieldStatus.isLicenseValid(this)) {
             goToMain();
             return;
         }
 
-        // 2. إذا لم يوجد تفعيل محلي، نفحص حالته في السيرفر
+        // 2. الفحص في السيرفر (المسار الموحد Users)
         String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-        DatabaseReference rootRef = FirebaseDatabase.getInstance().getReference();
+        DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("Users").child(androidId);
 
-        // فحص عقدة المستخدمين أولاً (Users)
-        rootRef.child("Users").child(androidId).addListenerForSingleValueEvent(new ValueEventListener() {
+        usersRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
+                    // جلب حالة التفعيل (تأكد من مطابقة الاسم is_activated)
                     Boolean isActivated = snapshot.child("is_activated").getValue(Boolean.class);
+                    
                     if (Boolean.TRUE.equals(isActivated)) {
-                        // المستخدم مفعل في السيرفر، نحفظ التفعيل محلياً وندخله
+                        // تفعيل ناجح: حفظ محلي والدخول للدرع
                         ShieldStatus.activateLicenseLocally(SplashActivity.this);
                         goToMain();
                     } else {
-                        // المستخدم موجود لكنه غير مفعل، نذهب للرئيسية لإظهار واجهة "قيد المراجعة"
+                        // طلب موجود لكن لم يتم تفعيله بعد: نرسله للرئيسية لإظهار واجهة الانتظار
                         goToMain();
                     }
                 } else {
-                    // المستخدم غير موجود في عقدة Users، نفحص هل لديه طلب معلق في Requests؟
-                    checkIfHasPendingRequest(rootRef, androidId);
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                // في حال خطأ الاتصال، نرسله للتفعيل كإجراء احترازي
-                goToActivation();
-            }
-        });
-    }
-
-    private void checkIfHasPendingRequest(DatabaseReference rootRef, String androidId) {
-        rootRef.child("Requests").child(androidId).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    // المستخدم أرسل طلباً بالفعل وهو بانتظار الأدمن
-                    goToMain();
-                } else {
-                    // مستخدم جديد كلياً لا يملك تفعيلاً ولا طلباً
+                    // مستخدم جديد تماماً ليس له سجل في Users
                     goToActivation();
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                goToActivation();
+                // في حال وجود مشكلة في الإنترنت، نرسله للرئيسية 
+                // MainActivity سيتكفل بمحاولة الفحص مرة أخرى أو إظهار خطأ
+                goToMain();
             }
         });
     }
