@@ -67,8 +67,6 @@ public class MainActivity extends AppCompatActivity {
 
         initViews();
         setupTerminal();
-        
-        // التحقق من حالة الترخيص والبدء بالمراقبة
         checkLicenseAndInitialize();
     }
 
@@ -80,7 +78,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             showShieldUI(false);
             txtPendingStatus.setText("جاري التحقق من السيرفر...");
-            
             userRef.addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -109,12 +106,10 @@ public class MainActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
                     Boolean isActivated = snapshot.child("is_activated").getValue(Boolean.class);
-                    if (Boolean.TRUE.equals(isActivated)) {
-                        if (!ShieldStatus.isLicenseValid(MainActivity.this)) {
-                            ShieldStatus.activateLicenseLocally(MainActivity.this);
-                            updateUIOnActivation();
-                        }
-                    } else if (ShieldStatus.isLicenseValid(MainActivity.this)) {
+                    if (Boolean.TRUE.equals(isActivated) && !ShieldStatus.isLicenseValid(MainActivity.this)) {
+                        ShieldStatus.activateLicenseLocally(MainActivity.this);
+                        updateUIOnActivation();
+                    } else if (!Boolean.TRUE.equals(isActivated) && ShieldStatus.isLicenseValid(MainActivity.this)) {
                         handleLicenseRevoked();
                     }
                 }
@@ -127,8 +122,7 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             showShieldUI(true);
             setupInitialState();
-            addToLog("SYSTEM: تم استقبال تصريح النشاط.. درع الحماية جاهز.");
-            Toast.makeText(MainActivity.this, "تم تفعيل تطبيقك بنجاح!", Toast.LENGTH_LONG).show();
+            addToLog("SYSTEM: تم استقبال تصريح النشاط.. درع حماية الواتساب.");
         });
     }
 
@@ -179,7 +173,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupInitialState() {
         isActive = ShieldStatus.isProtectionActive(this);
-        refreshStats(); 
+        lastKnownCount = ShieldStatus.getBlockedCount(this); 
+        txtBlockedCount.setText(String.valueOf(lastKnownCount));
         updateUI(isActive, false);
         if (isActive) {
             startShieldService();
@@ -205,19 +200,31 @@ public class MainActivity extends AppCompatActivity {
         updateUI(isActive, true);
     }
 
+    /**
+     * اقتباس منطق العداد من النسخة الأصلية (classes3.dex)
+     * تم دمج منطق الـ Handler ليعمل كل 1000ms كما في السمالي
+     */
     private void startCounterMonitor() {
         handler.removeCallbacksAndMessages(null);
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
+                // جلب القيمة الحالية من الكور (ShieldStatus)
                 int currentCount = ShieldStatus.getBlockedCount(MainActivity.this);
+                
                 if (currentCount > lastKnownCount) {
                     int diff = currentCount - lastKnownCount;
-                    addToLog("INTERCEPT: تم حجب " + diff + " محاولة إرسال تقرير حظر للسيرفر.");
-                    txtBlockedCount.setText(String.valueOf(currentCount));
-                    if (vibrator != null) vibrator.vibrate(40);
-                    lastKnownCount = currentCount;
+                    lastKnownCount = currentCount; // تحديث القيمة الأخيرة فوراً
+                    
+                    // تحديث الواجهة وإضافة سجل
+                    runOnUiThread(() -> {
+                        txtBlockedCount.setText(String.valueOf(lastKnownCount));
+                        addToLog("INTERCEPT: تم حجب " + diff + " محاولة إرسال تقرير أمني.");
+                        if (vibrator != null) vibrator.vibrate(40);
+                    });
                 }
+                
+                // الاستمرار في الفحص كل ثانية (1000ms)
                 handler.postDelayed(this, 1000);
             }
         }, 1000);
@@ -240,10 +247,9 @@ public class MainActivity extends AppCompatActivity {
         
         txtStatusMain.setText(active ? "الواتساب محمي" : "الواتساب غير محمي");
         btnStart.setText(active ? "إيقاف الدرع" : "تشغيل الدرع");
-
-        // --- تعديل وصف الحالة بناءً على التنشيط ---
+        
         if (active) {
-            txtDescription.setText("درع الحماية نشط الآن. يتم فحص وتصفية كافة البيانات الصادرة لضمان عدم اكتشاف نسختك.");
+            txtDescription.setText("درع الحماية نشط الآن. يتم فحص وتصفية كافة البيانات الصادرة لضمان عدم حظر الواتساب.");
         } else {
             txtDescription.setText("درع الحماية متوقف حالياً. واتساب لن يرسل أو يستقبل أي بيانات لضمان خصوصيتك.");
         }
@@ -269,11 +275,6 @@ public class MainActivity extends AppCompatActivity {
             else if (view instanceof ImageView) ((ImageView) view).setImageTintList(ColorStateList.valueOf(color));
         });
         colorAnimation.start();
-    }
-
-    private void refreshStats() {
-        lastKnownCount = ShieldStatus.getBlockedCount(this);
-        txtBlockedCount.setText(String.valueOf(lastKnownCount));
     }
 
     private void navigateToActivation() {
