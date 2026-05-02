@@ -109,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
                     if (Boolean.TRUE.equals(isActivated) && !ShieldStatus.isLicenseValid(MainActivity.this)) {
                         ShieldStatus.activateLicenseLocally(MainActivity.this);
                         updateUIOnActivation();
-                    } else if (!Boolean.TRUE.equals(isActivated) && ShieldStatus.isLicenseValid(MainActivity.this)) {
+                    } else if (isActivated != null && !isActivated && ShieldStatus.isLicenseValid(MainActivity.this)) {
                         handleLicenseRevoked();
                     }
                 }
@@ -201,22 +201,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * اقتباس منطق العداد من النسخة الأصلية (classes3.dex)
-     * تم دمج منطق الـ Handler ليعمل كل 1000ms كما في السمالي
+     * العداد الاحترافي: يقوم بمراقبة ملف الشيرد بريفرنسز كل ثانية (1000ms)
+     * ويحدث الواجهة ويضيف للسجل الأمني عند أي زيادة.
      */
     private void startCounterMonitor() {
         handler.removeCallbacksAndMessages(null);
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                // جلب القيمة الحالية من الكور (ShieldStatus)
+                // جلب القيمة المخزنة التي يكتبها الواتساب عبر ShieldProvider
                 int currentCount = ShieldStatus.getBlockedCount(MainActivity.this);
                 
                 if (currentCount > lastKnownCount) {
                     int diff = currentCount - lastKnownCount;
-                    lastKnownCount = currentCount; // تحديث القيمة الأخيرة فوراً
+                    lastKnownCount = currentCount; 
                     
-                    // تحديث الواجهة وإضافة سجل
                     runOnUiThread(() -> {
                         txtBlockedCount.setText(String.valueOf(lastKnownCount));
                         addToLog("INTERCEPT: تم حجب " + diff + " محاولة إرسال تقرير أمني.");
@@ -224,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
                     });
                 }
                 
-                // الاستمرار في الفحص كل ثانية (1000ms)
+                // الاستمرار في الفحص (تكرار كل 1 ثانية)
                 handler.postDelayed(this, 1000);
             }
         }, 1000);
