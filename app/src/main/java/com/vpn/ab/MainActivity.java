@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
         if (ShieldStatus.isLicenseValid(this)) {
             showShieldUI(true);
             setupInitialState();
-            startLicenseObserver(); // للمراقبة في حال سحب الترخيص
+            startLicenseObserver(); 
         } else {
             showShieldUI(false);
             txtPendingStatus.setText("جاري التحقق من السيرفر...");
@@ -127,8 +127,8 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             showShieldUI(true);
             setupInitialState();
-            addToLog("SYSTEM: تم تفعيل ترخيص الدرع بنجاح.");
-            Toast.makeText(MainActivity.this, "تم التفعيل بنجاح!", Toast.LENGTH_LONG).show();
+            addToLog("SYSTEM: تم استقبال تصريح النشاط.. درع الحماية جاهز.");
+            Toast.makeText(MainActivity.this, "تم تفعيل تطبيقك بنجاح!", Toast.LENGTH_LONG).show();
         });
     }
 
@@ -179,11 +179,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupInitialState() {
         isActive = ShieldStatus.isProtectionActive(this);
-        refreshStats(); // تحديث العداد بالقيمة المخزنة
+        refreshStats(); 
         updateUI(isActive, false);
         if (isActive) {
             startShieldService();
-            startCounterMonitor(); // بدء المراقبة فوراً إذا كان الدرع نشطاً
+            startCounterMonitor(); 
         }
     }
 
@@ -205,7 +205,6 @@ public class MainActivity extends AppCompatActivity {
         updateUI(isActive, true);
     }
 
-    // العداد والسجل الأمني المقتبس من النسخة القديمة الناجحة
     private void startCounterMonitor() {
         handler.removeCallbacksAndMessages(null);
         handler.postDelayed(new Runnable() {
@@ -219,7 +218,6 @@ public class MainActivity extends AppCompatActivity {
                     if (vibrator != null) vibrator.vibrate(40);
                     lastKnownCount = currentCount;
                 }
-                // تكرار الفحص كل ثانية لضمان اللحظية
                 handler.postDelayed(this, 1000);
             }
         }, 1000);
@@ -242,6 +240,13 @@ public class MainActivity extends AppCompatActivity {
         
         txtStatusMain.setText(active ? "الواتساب محمي" : "الواتساب غير محمي");
         btnStart.setText(active ? "إيقاف الدرع" : "تشغيل الدرع");
+
+        // --- تعديل وصف الحالة بناءً على التنشيط ---
+        if (active) {
+            txtDescription.setText("درع الحماية نشط الآن. يتم فحص وتصفية كافة البيانات الصادرة لضمان عدم اكتشاف نسختك.");
+        } else {
+            txtDescription.setText("درع الحماية متوقف حالياً. واتساب لن يرسل أو يستقبل أي بيانات لضمان خصوصيتك.");
+        }
 
         if (animate) {
             animateColorChange(btnStart, targetColor);
