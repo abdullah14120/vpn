@@ -24,7 +24,7 @@ public class SplashActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
-        // تأثير الحركة للشعار
+        // تأثير الحركة للشعار (Pulse Effect)
         ImageView logo = findViewById(R.id.imgLogo);
         if (logo != null) {
             Animation anim = new AlphaAnimation(0.4f, 1.0f);
@@ -34,46 +34,55 @@ public class SplashActivity extends AppCompatActivity {
             logo.startAnimation(anim);
         }
 
-        // بدء الفحص بعد 1.5 ثانية
+        // بدء الفحص بعد 1.5 ثانية لإعطاء وقت لعرض الشعار
         new Handler(Looper.getMainLooper()).postDelayed(this::checkStatus, 1500);
     }
 
     private void checkStatus() {
-        // 1. الفحص المحلي (لتوفير استهلاك البيانات وسرعة الفتح للمشتركين)
+        /**
+         * 1. الفحص المحلي (صمام الأمان السريع)
+         * إذا كان المستخدم مفعلاً سابقاً، يتم تحويله فوراً للواجهة الرئيسية
+         * دون الحاجة للاتصال بالإنترنت أو انتظار رد Firebase.
+         */
         if (ShieldStatus.isLicenseValid(this)) {
             goToMain();
             return;
         }
 
-        // 2. الفحص في السيرفر (المسار الموحد Users)
+        /**
+         * 2. الفحص في السيرفر (للمستخدمين الجدد أو من حذفوا بيانات التطبيق)
+         * نستخدم المسار الموحد "Users" لضمان التوافق مع تطبيق الأدمن.
+         */
         String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("Users").child(androidId);
 
+        // استخدام addListenerForSingleValueEvent للفحص لمرة واحدة فقط (أسرع وأخف)
         usersRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
-                    // جلب حالة التفعيل (تأكد من مطابقة الاسم is_activated)
+                    // جلب حالة التفعيل من الحقل الموحد is_activated
                     Boolean isActivated = snapshot.child("is_activated").getValue(Boolean.class);
                     
                     if (Boolean.TRUE.equals(isActivated)) {
-                        // تفعيل ناجح: حفظ محلي والدخول للدرع
+                        // تفعيل ناجح: حفظ التفعيل في الجهاز للأبد والدخول للمين
                         ShieldStatus.activateLicenseLocally(SplashActivity.this);
                         goToMain();
                     } else {
-                        // طلب موجود لكن لم يتم تفعيله بعد: نرسله للرئيسية لإظهار واجهة الانتظار
+                        // طلب موجود ولكنه قيد المراجعة: نرسله لـ MainActivity 
+                        // حيث ستتولى الواجهة هناك إظهار "واجهة الانتظار"
                         goToMain();
                     }
                 } else {
-                    // مستخدم جديد تماماً ليس له سجل في Users
+                    // مستخدم جديد ليس له سجل نهائياً: نرسله لصفحة إرسال الطلب
                     goToActivation();
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // في حال وجود مشكلة في الإنترنت، نرسله للرئيسية 
-                // MainActivity سيتكفل بمحاولة الفحص مرة أخرى أو إظهار خطأ
+                // في حال فشل الاتصال (انقطاع إنترنت)، نرسله للرئيسية
+                // لكي لا يظل عالقاً في صفحة Splash
                 goToMain();
             }
         });
