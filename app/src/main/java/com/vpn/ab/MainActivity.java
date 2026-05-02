@@ -60,30 +60,26 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // نضبط الواجهة أولاً لمنع الانهيار عند محاولة الوصول للعناصر
         setContentView(R.layout.activity_main);
         
         androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-        // المسار الموحد "Users" لضمان المزامنة مع الأدمن
         userRef = FirebaseDatabase.getInstance().getReference("Users").child(androidId);
 
         initViews();
         setupTerminal();
         
-        // التحقق من حالة الترخيص
+        // التحقق من حالة الترخيص والبدء بالمراقبة
         checkLicenseAndInitialize();
     }
 
     private void checkLicenseAndInitialize() {
-        // إذا كان مفعلاً محلياً، نفتح الواجهة مباشرة ونبدأ المراقبة للتأكد من استمرار الصلاحية
         if (ShieldStatus.isLicenseValid(this)) {
             showShieldUI(true);
             setupInitialState();
-            startLicenseObserver();
+            startLicenseObserver(); // للمراقبة في حال سحب الترخيص
         } else {
-            // غير مفعل محلياً، نفحص السيرفر
             showShieldUI(false);
-            txtPendingStatus.setText("جاري التحقق من حالة التفعيل...");
+            txtPendingStatus.setText("جاري التحقق من السيرفر...");
             
             userRef.addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
@@ -91,45 +87,34 @@ public class MainActivity extends AppCompatActivity {
                     if (snapshot.exists()) {
                         Boolean isActivated = snapshot.child("is_activated").getValue(Boolean.class);
                         if (Boolean.TRUE.equals(isActivated)) {
-                            // تم التفعيل!
                             ShieldStatus.activateLicenseLocally(MainActivity.this);
                             showShieldUI(true);
                             setupInitialState();
                         } else {
-                            // موجود بالسيرفر لكن لم يفعل بعد
                             txtPendingStatus.setText("طلبك قيد المراجعة لدى الإدارة...");
                         }
-                        // نستمر في مراقبة الحالة في حال قام الأدمن بتفعيله الآن
                         startLicenseObserver();
                     } else {
-                        // لا يوجد طلب أصلاً، نرسله لواجهة التفعيل
                         navigateToActivation();
                     }
                 }
-
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    txtPendingStatus.setText("خطأ في الاتصال بالسيرفر");
-                }
+                @Override public void onCancelled(@NonNull DatabaseError error) {}
             });
         }
     }
 
     private void startLicenseObserver() {
-        // مراقب لحظي (Realtime Observer)
         userRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
                     Boolean isActivated = snapshot.child("is_activated").getValue(Boolean.class);
-                    
                     if (Boolean.TRUE.equals(isActivated)) {
                         if (!ShieldStatus.isLicenseValid(MainActivity.this)) {
                             ShieldStatus.activateLicenseLocally(MainActivity.this);
                             updateUIOnActivation();
                         }
                     } else if (ShieldStatus.isLicenseValid(MainActivity.this)) {
-                        // تم سحب الترخيص من قبل الأدمن
                         handleLicenseRevoked();
                     }
                 }
@@ -142,8 +127,8 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             showShieldUI(true);
             setupInitialState();
-            addToLog("SYSTEM: تم استقبال تصريح النشاط.. درع الحماية جاهز.");
-            Toast.makeText(MainActivity.this, "تم تفعيل تطبيقك بنجاح!", Toast.LENGTH_LONG).show();
+            addToLog("SYSTEM: تم تفعيل ترخيص الدرع بنجاح.");
+            Toast.makeText(MainActivity.this, "تم التفعيل بنجاح!", Toast.LENGTH_LONG).show();
         });
     }
 
@@ -162,13 +147,9 @@ public class MainActivity extends AppCompatActivity {
         txtStatusMain.setVisibility(visibility);
         txtDescription.setVisibility(visibility);
         
-        View cardStats = findViewById(R.id.cardStats);
-        View cardTerminal = findViewById(R.id.cardTerminal);
-        View lblTerminal = findViewById(R.id.lblTerminal);
-        
-        if (cardStats != null) cardStats.setVisibility(visibility);
-        if (cardTerminal != null) cardTerminal.setVisibility(visibility);
-        if (lblTerminal != null) lblTerminal.setVisibility(visibility);
+        if (findViewById(R.id.cardStats) != null) findViewById(R.id.cardStats).setVisibility(visibility);
+        if (findViewById(R.id.cardTerminal) != null) findViewById(R.id.cardTerminal).setVisibility(visibility);
+        if (findViewById(R.id.lblTerminal) != null) findViewById(R.id.lblTerminal).setVisibility(visibility);
         
         if (layoutPending != null) layoutPending.setVisibility(pendingVisibility);
     }
@@ -198,11 +179,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupInitialState() {
         isActive = ShieldStatus.isProtectionActive(this);
-        refreshStats();
+        refreshStats(); // تحديث العداد بالقيمة المخزنة
         updateUI(isActive, false);
         if (isActive) {
             startShieldService();
-            startCounterMonitor();
+            startCounterMonitor(); // بدء المراقبة فوراً إذا كان الدرع نشطاً
         }
     }
 
@@ -213,17 +194,18 @@ public class MainActivity extends AppCompatActivity {
         if (isActive) {
             startShieldService();
             startCounterMonitor();
-            addToLog("PROTOCOL: تم تشغيل درع حماية الواتساب.");
+            addToLog("PROTOCOL: تم تفعيل درع الحماية النشط.");
         } else {
             stopShieldService();
             handler.removeCallbacksAndMessages(null);
-            addToLog("PROTOCOL: النظام في وضع الاستعداد.");
+            addToLog("PROTOCOL: الدرع في وضع الاستعداد.");
         }
 
         if (vibrator != null) vibrator.vibrate(isActive ? 70 : 30);
         updateUI(isActive, true);
     }
 
+    // العداد والسجل الأمني المقتبس من النسخة القديمة الناجحة
     private void startCounterMonitor() {
         handler.removeCallbacksAndMessages(null);
         handler.postDelayed(new Runnable() {
@@ -232,12 +214,13 @@ public class MainActivity extends AppCompatActivity {
                 int currentCount = ShieldStatus.getBlockedCount(MainActivity.this);
                 if (currentCount > lastKnownCount) {
                     int diff = currentCount - lastKnownCount;
-                    addToLog("INTERCEPT: تم حجب " + diff + " محاولة تمرير تقرير أمني لشركة الواتساب.");
+                    addToLog("INTERCEPT: تم حجب " + diff + " محاولة إرسال تقرير حظر للسيرفر.");
                     txtBlockedCount.setText(String.valueOf(currentCount));
                     if (vibrator != null) vibrator.vibrate(40);
                     lastKnownCount = currentCount;
                 }
-                handler.postDelayed(this, 2000);
+                // تكرار الفحص كل ثانية لضمان اللحظية
+                handler.postDelayed(this, 1000);
             }
         }, 1000);
     }
@@ -284,9 +267,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshStats() {
-        int count = ShieldStatus.getBlockedCount(this);
-        txtBlockedCount.setText(String.valueOf(count));
-        lastKnownCount = count;
+        lastKnownCount = ShieldStatus.getBlockedCount(this);
+        txtBlockedCount.setText(String.valueOf(lastKnownCount));
     }
 
     private void navigateToActivation() {
