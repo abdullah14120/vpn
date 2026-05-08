@@ -18,15 +18,20 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # إعداد Gradle في البيئة
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+
+      # --- السطر السحري: توليد ملفات الـ Wrapper تلقائياً من السيرفر ---
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper --gradle-version 8.2
 
       # فك تشفير ملف التوقيع nasa_new.jks
       - name: Decode Keystore
         run: |
           printf "%s" "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/nasa_new.jks
 
-      # حل مشكلة Permission denied لمنح صلاحية التنفيذ لـ gradlew
+      # منح صلاحية التنفيذ لـ gradlew الذي تم توليده
       - name: Make Gradlew Executable
         run: chmod +x gradlew
 
