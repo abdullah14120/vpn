@@ -2,117 +2,66 @@ package com.vpn.ab.core;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.Signature;
-import android.provider.Settings;
-import android.util.Base64;
 import android.util.Log;
-import java.security.MessageDigest;
 
 public class ShieldStatus {
 
     private static final String TAG = "ShieldCore";
+    
+    // أسماء ملفات التخزين - مطابقة للمشروع القديم لضمان الثبات
     private static final String PREFS_NAME = "shield_security_prefs";
     private static final String LICENSE_PREFS = "security_prefs"; 
     
-    private static final String KEY_SHIELD_ACTIVE = "shield_active_state";
-    private static final String KEY_BLOCKED_COUNT = "reports_blocked_count";
-    private static final String KEY_LAST_INTERCEPT = "last_intercept_time";
-    private static final String KEY_SECURE_TOKEN = "secure_license_token";
+    // المفاتيح (Keys)
+    public static final String KEY_SHIELD_ACTIVE = "shield_active_state";
+    public static final String KEY_BLOCKED_COUNT = "reports_blocked_count";
+    public static final String KEY_LAST_INTERCEPT = "last_intercept_time";
+    public static final String KEY_IS_ACTIVATED = "is_activated";
 
     /**
-     * ملاحظة: قمت بتعطيل الفحص الصارم للهاش مؤقتاً لكي يعمل التطبيق 
-     * بنسخة الـ Debug التي يتم بناؤها عبر GitHub Actions.
+     * وضع الوصول المتعدد (0x0004): 
+     * ضروري جداً لأن الواتساب يكتب القيمة وتطبيقك يقرأها في نفس الوقت.
      */
-    private static final String ORIGINAL_SIGNATURE_HASH = "DEBUG_MODE_ACTIVE";
-
     private static SharedPreferences getPrefs(Context context) {
         if (context == null) return null;
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE); 
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE | 0x0004); 
     }
 
     private static SharedPreferences getLicensePrefs(Context context) {
         if (context == null) return null;
-        return context.getSharedPreferences(LICENSE_PREFS, Context.MODE_PRIVATE);
+        return context.getSharedPreferences(LICENSE_PREFS, Context.MODE_PRIVATE | 0x0004);
     }
 
-    /**
-     * التحقق من نزاهة التطبيق
-     * قمت بتعديلها لكي تطبع الهاش الجديد في Logcat وتسمح بمرور التطبيق حالياً.
-     */
-    public static boolean verifyAppIntegrity(Context context) {
-        try {
-            PackageInfo packageInfo = context.getPackageManager().getPackageInfo(
-                    context.getPackageName(), PackageManager.GET_SIGNATURES);
-            
-            for (Signature signature : packageInfo.signatures) {
-                MessageDigest md = MessageDigest.getInstance("SHA-256");
-                md.update(signature.toByteArray());
-                // استخراج الهاش بصيغة Hex لسهولة مطابقته مع أدوات keytool
-                byte[] digest = md.digest();
-                StringBuilder sb = new StringBuilder();
-                for (byte b : digest) {
-                    sb.append(String.format("%02X", b));
-                }
-                String currentHash = sb.toString();
-                
-                // هام جداً: راقب هذا الهاش في Logcat عند تشغيل التطبيق
-                Log.d(TAG, "🚀 [Shield] بصمة التوقيع الحالية: " + currentHash);
-                
-                // حالياً سنعيد true دائماً لكي لا يتوقف التطبيق أثناء تجربة GitHub
-                return true; 
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Integrity Check Error: " + e.getMessage());
-        }
-        return true; // مسموح بالمرور مؤقتاً
-    }
-
-    /**
-     * فحص التفعيل المرتبط بالهوية الفريدة للجهاز
-     */
-    public static boolean isLicenseValidEncrypted(Context context) {
+    // فحص الترخيص (التفعيل الأبدي)
+    public static boolean isLicenseValid(Context context) {
         SharedPreferences prefs = getLicensePrefs(context);
-        if (prefs == null) return false;
-
-        String storedToken = prefs.getString(KEY_SECURE_TOKEN, null);
-        if (storedToken == null) return false;
-
-        String expectedToken = generateSecureDeviceToken(context);
-        return expectedToken.equals(storedToken);
+        return prefs != null && prefs.getBoolean(KEY_IS_ACTIVATED, false);
     }
 
-    public static void secureActivate(Context context, String serverSalt) {
+    // حفظ التفعيل محلياً للأبد
+    public static void activateLicenseLocally(Context context) {
         SharedPreferences prefs = getLicensePrefs(context);
         if (prefs != null) {
-            String secureToken = generateSecureDeviceToken(context);
-            prefs.edit().putString(KEY_SECURE_TOKEN, secureToken).apply();
-            Log.d(TAG, "✅ [Security] تم تفعيل الترخيص وربطه بمعرف الجهاز.");
+            prefs.edit().putBoolean(KEY_IS_ACTIVATED, true).apply();
+            Log.d(TAG, "✅ [Security] تم تثبيت ترخيص النشاط الدائم.");
         }
     }
 
-    private static String generateSecureDeviceToken(Context context) {
-        try {
-            String androidId = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-            // ملح سري لضمان عدم توليد نفس التوكن في تطبيقات أخرى
-            String raw = "AB_SHIELD_PRO_" + androidId + "_SALT_2026"; 
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(raw.getBytes("UTF-8"));
-            return Base64.encodeToString(hash, Base64.NO_WRAP);
-        } catch (Exception e) {
-            return "ERR_TOKEN";
-        }
-    }
-
-    // --- الوظائف الأساسية للدرع ---
-
+    // جلب قيمة العداد الحالية للواجهة
     public static int getBlockedCount(Context context) {
+        if (!isLicenseValid(context)) return 0;
         SharedPreferences prefs = getPrefs(context);
         return (prefs != null) ? prefs.getInt(KEY_BLOCKED_COUNT, 0) : 0;
     }
 
+    /**
+     * الدالة التي يستدعيها الواتساب عبر ShieldProvider.
+     * مزامنة كاملة لضمان عدم ضياع أي "هجمة" يتم صدها.
+     */
     public static synchronized void incrementBlockedCount(Context context) {
+        // إذا سقط التفعيل، يتوقف العداد فوراً
+        if (!isLicenseValid(context)) return;
+
         SharedPreferences prefs = getPrefs(context);
         if (prefs == null) return;
 
@@ -121,14 +70,20 @@ public class ShieldStatus {
                 .putInt(KEY_BLOCKED_COUNT, currentCount + 1)
                 .putLong(KEY_LAST_INTERCEPT, System.currentTimeMillis())
                 .apply();
+        
+        Log.i(TAG, "🛡️ [Intercept] محاولة حظر مكتشفة. الإجمالي: " + (currentCount + 1));
     }
 
+    // حالة زر الدرع (Active/Inactive)
     public static boolean isProtectionActive(Context context) {
+        if (!isLicenseValid(context)) return false;
         SharedPreferences prefs = getPrefs(context);
         return prefs != null && prefs.getBoolean(KEY_SHIELD_ACTIVE, false);
     }
 
+    // تغيير حالة الدرع من الواجهة
     public static void setProtectionState(Context context, boolean active) {
+        if (!isLicenseValid(context)) return;
         SharedPreferences prefs = getPrefs(context);
         if (prefs != null) {
             prefs.edit()
@@ -138,12 +93,14 @@ public class ShieldStatus {
         }
     }
 
-    public static boolean isLicenseValid(Context context) {
-        // إذا كنت في مرحلة التطوير، سنعتبرها دائماً صالحة
-        return isLicenseValidEncrypted(context) || true; 
-    }
-
-    public static void activateLicenseLocally(Context context) {
-        secureActivate(context, "LOCAL");
+    // تصفير البيانات (للدعم الفني)
+    public static void resetStats(Context context) {
+        SharedPreferences prefs = getPrefs(context);
+        if (prefs != null) {
+            prefs.edit()
+                    .putInt(KEY_BLOCKED_COUNT, 0)
+                    .putLong(KEY_LAST_INTERCEPT, 0)
+                    .apply();
+        }
     }
 }
