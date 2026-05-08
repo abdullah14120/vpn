@@ -2,14 +2,15 @@ name: Build and Sign APK
 
 on:
   push:
-    branches: [ "main" ] # أو اسم الفرع الرئيسي لديك
+    branches: [ "main" ] # سيعمل التلقائي عند رفع الكود لفرع main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -20,21 +21,24 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # خطوة فك تشفير ملف التوقيع من الـ Secrets
+      # فك تشفير ملف التوقيع nasa_new.jks
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/nasa_new.jks
+          printf "%s" "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/nasa_new.jks
 
-      # بناء نسخة الـ Release الموقعة
+      # حل مشكلة Permission denied لمنح صلاحية التنفيذ لـ gradlew
+      - name: Make Gradlew Executable
+        run: chmod +x gradlew
+
+      # بناء نسخة الـ Release الموقعة باستخدام المتغيرات السرية
       - name: Build Signed Release APK
         run: ./gradlew assembleRelease
         env:
-          # ربط المتغيرات التي سيقرأها ملف build.gradle
           SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      # رفع الملف النهائي كـ Artifact
+      # رفع ملف الـ APK الناتج لكي تتمكن من تحميله
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
