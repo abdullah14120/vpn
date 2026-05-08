@@ -40,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private MaterialButton btnStart;
     private LinearLayout layoutPending;
     private TextView txtPendingStatus;
+    private View cardStats, cardTerminal, lblTerminal;
 
     private RecyclerView recyclerSecurityLog;
     private LogAdapter logAdapter;
@@ -63,18 +64,22 @@ public class MainActivity extends AppCompatActivity {
         initViews();
         setupTerminal();
         
-        // --- القاعدة الذهبية للتثبيت ---
+        // --- حماية النزاهة: إذا تم العبث بالتوقيع، أغلق التطبيق فوراً ---
+        if (!ShieldStatus.verifyAppIntegrity(this)) {
+            finishAffinity();
+            return;
+        }
+
         checkFinalActivation();
     }
 
     private void checkFinalActivation() {
-        // 1. الفحص المحلي الصامت: إذا كان مفعلاً سابقاً، افتح الواجهة فوراً وللأبد
-        if (ShieldStatus.isLicenseValid(this)) {
+        // الفحص المحلي المشفر
+        if (ShieldStatus.isLicenseValidEncrypted(this)) {
             renderActiveUI();
             return;
         }
 
-        // 2. إذا لم يكن مفعلاً محلياً، نظهر واجهة الانتظار ونفحص السيرفر "لمرة واحدة فقط"
         renderWaitingUI();
         
         userRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -82,16 +87,16 @@ public class MainActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
                     Boolean isActivated = snapshot.child("is_activated").getValue(Boolean.class);
-                    if (Boolean.TRUE.equals(isActivated)) {
-                        // الموافقة تمت! نثبت التفعيل محلياً للأبد
-                        ShieldStatus.activateLicenseLocally(MainActivity.this);
+                    String serverToken = snapshot.child("security_token").getValue(String.class);
+                    
+                    if (Boolean.TRUE.equals(isActivated) && serverToken != null) {
+                        // تثبيت التوكن الأمني محلياً (تشفير ثنائي)
+                        ShieldStatus.secureActivate(MainActivity.this, serverToken);
                         renderActiveUI();
                     } else {
-                        // الطلب موجود ولكن بانتظار الأدمن
                         txtPendingStatus.setText("⏳ طلبك بانتظار تفعيل الإدارة.. لا تغلق التطبيق.");
                     }
                 } else {
-                    // لا يوجد طلب أصلاً -> طرد لواجهة التفعيل
                     navigateToActivation();
                 }
             }
@@ -100,37 +105,31 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void renderActiveUI() {
-        // إخفاء واجهة الانتظار وإظهار الدرع للأبد
         if (layoutPending != null) layoutPending.setVisibility(View.GONE);
         
         btnStart.setVisibility(View.VISIBLE);
         imgStatus.setVisibility(View.VISIBLE);
         txtStatusMain.setVisibility(View.VISIBLE);
         txtDescription.setVisibility(View.VISIBLE);
-        
-        if (findViewById(R.id.cardStats) != null) findViewById(R.id.cardStats).setVisibility(View.VISIBLE);
-        if (findViewById(R.id.cardTerminal) != null) findViewById(R.id.cardTerminal).setVisibility(View.VISIBLE);
-        if (findViewById(R.id.lblTerminal) != null) findViewById(R.id.lblTerminal).setVisibility(View.VISIBLE);
+        cardStats.setVisibility(View.VISIBLE);
+        cardTerminal.setVisibility(View.VISIBLE);
+        lblTerminal.setVisibility(View.VISIBLE);
         
         setupInitialState();
     }
 
     private void renderWaitingUI() {
-        // إخفاء كل شيء وإظهار الانتظار فقط
         btnStart.setVisibility(View.GONE);
         imgStatus.setVisibility(View.GONE);
         txtStatusMain.setVisibility(View.GONE);
         txtDescription.setVisibility(View.GONE);
-        
-        if (findViewById(R.id.cardStats) != null) findViewById(R.id.cardStats).setVisibility(View.GONE);
-        if (findViewById(R.id.cardTerminal) != null) findViewById(R.id.cardTerminal).setVisibility(View.GONE);
-        if (findViewById(R.id.lblTerminal) != null) findViewById(R.id.lblTerminal).setVisibility(View.GONE);
+        cardStats.setVisibility(View.GONE);
+        cardTerminal.setVisibility(View.GONE);
+        lblTerminal.setVisibility(View.GONE);
 
         if (layoutPending != null) layoutPending.setVisibility(View.VISIBLE);
     }
 
-    // باقي الدوال (initViews, startCounterMonitor, addToLog) كما هي في مشروعك القديم الناجح
-    
     private void initViews() {
         imgStatus = findViewById(R.id.imgStatus);
         txtStatusMain = findViewById(R.id.txtStatusMain);
@@ -140,8 +139,12 @@ public class MainActivity extends AppCompatActivity {
         recyclerSecurityLog = findViewById(R.id.recyclerSecurityLog);
         layoutPending = findViewById(R.id.layoutPending); 
         txtPendingStatus = findViewById(R.id.txtPendingStatus);
-        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         
+        cardStats = findViewById(R.id.cardStats);
+        cardTerminal = findViewById(R.id.cardTerminal);
+        lblTerminal = findViewById(R.id.lblTerminal);
+        
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         btnStart.setOnClickListener(v -> toggleShield());
     }
 
@@ -155,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
         isActive = ShieldStatus.isProtectionActive(this);
         lastKnownCount = ShieldStatus.getBlockedCount(this); 
         txtBlockedCount.setText(String.valueOf(lastKnownCount));
-        updateUI(isActive, false);
+        updateUI(isActive, false); // تحديث الألوان فوراً عند الفتح
         if (isActive) startCounterMonitor();
     }
 
@@ -163,10 +166,43 @@ public class MainActivity extends AppCompatActivity {
         isActive = !isActive;
         ShieldStatus.setProtectionState(this, isActive);
         if (vibrator != null) vibrator.vibrate(isActive ? 70 : 30);
+        
         updateUI(isActive, true);
-        addToLog(isActive ? "PROTOCOL: تم تفعيل درع الحماية." : "PROTOCOL: الحماية في وضع الاستعداد.");
+        
+        addToLog(isActive ? "PROTOCOL: تم تفعيل درع الحماية النشط." : "PROTOCOL: تم إيقاف الحماية، النظام في خطر.");
+        
         if (isActive) startCounterMonitor();
         else handler.removeCallbacksAndMessages(null);
+    }
+
+    private void updateUI(boolean active, boolean animate) {
+        int colorRed = Color.parseColor("#FF5252");
+        int colorGreen = Color.parseColor("#4CAF50");
+        int targetColor = active ? colorGreen : colorRed;
+
+        // إصلاح إظهار التفاصيل والألوان
+        txtStatusMain.setText(active ? "الواتساب محمي" : "الواتساب غير محمي");
+        txtStatusMain.setTextColor(targetColor);
+        
+        txtDescription.setText(active ? "درع الحماية نشط ويقوم بفلترة التقارير الآن" : "الدرع متوقف، النسخة معرضة للفحص الأمني");
+        
+        btnStart.setText(active ? "إيقاف الدرع" : "تشغيل الدرع");
+        btnStart.setBackgroundTintList(ColorStateList.valueOf(targetColor));
+        
+        // تغيير لون الأيقونة
+        imgStatus.setImageTintList(ColorStateList.valueOf(targetColor));
+
+        if (animate) {
+            // تأثير نبضي عند التفعيل
+            ValueAnimator anim = ValueAnimator.ofFloat(1f, 1.2f, 1f);
+            anim.setDuration(300);
+            anim.addUpdateListener(animation -> {
+                float scale = (float) animation.getAnimatedValue();
+                imgStatus.setScaleX(scale);
+                imgStatus.setScaleY(scale);
+            });
+            anim.start();
+        }
     }
 
     private void startCounterMonitor() {
@@ -177,12 +213,12 @@ public class MainActivity extends AppCompatActivity {
                 int currentCount = ShieldStatus.getBlockedCount(MainActivity.this);
                 if (currentCount > lastKnownCount) {
                     int diff = currentCount - lastKnownCount;
-                    addToLog("INTERCEPT: تم حجب " + diff + " محاولة حظر (تقرير أمني).");
+                    addToLog("INTERCEPT: تم حجب محاولة حظر (Reporting Stanza).");
                     txtBlockedCount.setText(String.valueOf(currentCount));
                     if (vibrator != null) vibrator.vibrate(40);
                     lastKnownCount = currentCount;
                 }
-                handler.postDelayed(this, 1000);
+                handler.postDelayed(this, 1500);
             }
         }, 1000);
     }
@@ -195,19 +231,6 @@ public class MainActivity extends AppCompatActivity {
             logAdapter.notifyItemInserted(0);
             recyclerSecurityLog.scrollToPosition(0);
         });
-    }
-
-    private void updateUI(boolean active, boolean animate) {
-        int colorRed = Color.parseColor("#FF5252");
-        int colorGreen = Color.parseColor("#4CAF50");
-        int targetColor = active ? colorGreen : colorRed;
-        txtStatusMain.setText(active ? "الواتساب محمي" : "الواتساب غير محمي");
-        btnStart.setText(active ? "إيقاف الدرع" : "تشغيل الدرع");
-        if (!animate) {
-            btnStart.setBackgroundTintList(ColorStateList.valueOf(targetColor));
-            imgStatus.setImageTintList(ColorStateList.valueOf(targetColor));
-            txtStatusMain.setTextColor(targetColor);
-        }
     }
 
     private void navigateToActivation() {
