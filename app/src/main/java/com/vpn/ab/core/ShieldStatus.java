@@ -24,7 +24,7 @@ public class ShieldStatus {
 
     // هاش توقيعك الأصلي (SHA-256) - يجب استبداله بهاش توقيع تطبيقك الحقيقي
     // يمكنك استخراجه عبر Logcat باستخدام دالة verifyAppIntegrity المرفقة
-    private static final String ORIGINAL_SIGNATURE_HASH = "3F7FD996BF854105020301D4C0BF85420502030315E3300A06082A8648CE3D0403";
+    private static final String ORIGINAL_SIGNATURE_HASH = "FC287673ED1AD90A0F941082CA2B7AFCD260DE679286E4E4297079729517DBC3";
 
     private static SharedPreferences getPrefs(Context context) {
         if (context == null) return null;
