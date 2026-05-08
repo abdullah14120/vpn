@@ -1,4 +1,4 @@
-name: Build and Sign APK
+name: Build Debug APK
 
 on:
   push:
@@ -21,50 +21,20 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # توليد الـ Wrapper لضمان استقرار البيئة
+      # توليد ملفات الـ Wrapper من السيرفر لضمان استقرار البناء
       - name: Generate Gradle Wrapper
         run: gradle wrapper --gradle-version 8.2
-
-      # --- الطريقة الاحترافية لمنع تلف الملف (استخدام الملف الوسيط) ---
-      - name: Decode Keystore
-        run: |
-          # 1. حفظ النص في ملف نصي لتجنب مشاكل الـ Buffer في الـ Shell
-          cat <<EOF > keystore_base64.txt
-          ${{ secrets.KEYSTORE_BASE64 }}
-          EOF
-          
-          # 2. فك التشفير من ملف إلى ملف (أضمن وسيلة لسلامة البيانات الثنائية)
-          base64 --decode keystore_base64.txt > app/nasa_new.jks
-          
-          # 3. تنظيف الملفات المؤقتة
-          rm keystore_base64.txt
-
-      # فحص سلامة الملف وحجمه (سيظهر في السجلات للتأكد)
-      - name: Verify Keystore File
-        run: |
-          if [ -s app/nasa_new.jks ]; then
-            echo "✅ Keystore file created successfully."
-            ls -lh app/nasa_new.jks
-            file app/nasa_new.jks
-          else
-            echo "❌ Failed to create Keystore file."
-            exit 1
-          fi
 
       - name: Make Gradlew Executable
         run: chmod +x gradlew
 
-      # بناء نسخة الـ Release الموقعة
-      - name: Build Signed Release APK
-        run: ./gradlew assembleRelease
-        env:
-          SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      # بناء نسخة الـ Debug (لا تحتاج لمفاتيح أو Secrets)
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
-      # رفع الملف الناتج
-      - name: Upload Signed APK
+      # رفع ملف الـ APK الناتج كـ Artifact
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: AB-Shield-Release
-          path: app/build/outputs/apk/release/*.apk
+          name: AB-Shield-Debug-Build
+          path: app/build/outputs/apk/debug/*.apk
