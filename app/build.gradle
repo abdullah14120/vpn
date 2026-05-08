@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace 'com.vpn.ab'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.vpn.ab"
         minSdk 21
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "1.0-Shield-Pro"
 
@@ -18,31 +18,21 @@ android {
         multiDexEnabled true
     }
 
-    // --- إضافة إعدادات التوقيع هنا ---
-    signingConfigs {
-        release {
-            // سيتم إنشاء هذا الملف مؤقتاً بواسطة GitHub Action
-            storeFile file("nasa_new.jks")
-            
-            // قراءة كلمات المرور والـ Alias من متغيرات البيئة (System.getenv)
-            // هذه المتغيرات يتم تمريرها من ملف الـ YAML في GitHub
-            storePassword System.getenv("SIGNING_STORE_PASSWORD")
-            keyAlias System.getenv("SIGNING_KEY_ALIAS")
-            keyPassword System.getenv("SIGNING_KEY_PASSWORD")
-        }
-    }
+    // تم حذف قسم signingConfigs بالكامل لإلغاء الاعتماد على المفتاح الخارجي
 
     buildTypes {
         release {
-            // ربط نسخة الـ Release بإعدادات التوقيع أعلاه
-            signingConfig signingConfigs.release
+            // تم إلغاء ربط التوقيع هنا
+            // سيقوم أندرويد باستخدام التوقيع الافتراضي (Default) أو بناء نسخة غير موقعة (Unsigned)
             
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        
         debug {
             minifyEnabled false
+            // نسخة الديباج تستخدم دائماً مفتاح التوقيع التلقائي الخاص بأندرويد ستوديو
         }
     }
 
@@ -64,7 +54,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.cardview:cardview:1.0.0'
 
-    // مكتبة الأنيميشن للدرع
+    // مكتبة الأنيميشن
     implementation 'com.airbnb.android:lottie:6.1.0'
 
     // دعم Multi-Dex
