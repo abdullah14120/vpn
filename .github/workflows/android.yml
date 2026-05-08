@@ -2,7 +2,7 @@ name: Build and Sign APK
 
 on:
   push:
-    branches: [ "main" ] # سيعمل التلقائي عند رفع الكود لفرع main
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -18,24 +18,28 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # إعداد Gradle في البيئة
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # --- السطر السحري: توليد ملفات الـ Wrapper تلقائياً من السيرفر ---
+      # توليد الـ Wrapper لضمان وجود المحرك الصحيح
       - name: Generate Gradle Wrapper
         run: gradle wrapper --gradle-version 8.2
 
-      # فك تشفير ملف التوقيع nasa_new.jks
+      # --- فك التشفير بالطريقة الاحترافية (تجنب تلف الملف) ---
       - name: Decode Keystore
         run: |
-          printf "%s" "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/nasa_new.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode --ignore-garbage > app/nasa_new.jks
 
-      # منح صلاحية التنفيذ لـ gradlew الذي تم توليده
+      # خطوة فحص الملف (ستظهر في اللوج إذا كان حجمه منطقياً)
+      - name: Verify Keystore Integrity
+        run: |
+          ls -lh app/nasa_new.jks
+          file app/nasa_new.jks
+
       - name: Make Gradlew Executable
         run: chmod +x gradlew
 
-      # بناء نسخة الـ Release الموقعة باستخدام المتغيرات السرية
+      # بناء نسخة الـ Release
       - name: Build Signed Release APK
         run: ./gradlew assembleRelease
         env:
@@ -43,7 +47,6 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      # رفع ملف الـ APK الناتج لكي تتمكن من تحميله
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
