@@ -21,25 +21,40 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # توليد الـ Wrapper لضمان وجود المحرك الصحيح
+      # توليد الـ Wrapper لضمان استقرار البيئة
       - name: Generate Gradle Wrapper
         run: gradle wrapper --gradle-version 8.2
 
-      # --- فك التشفير بالطريقة الاحترافية (تجنب تلف الملف) ---
+      # --- الطريقة الاحترافية لمنع تلف الملف (استخدام الملف الوسيط) ---
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode --ignore-garbage > app/nasa_new.jks
+          # 1. حفظ النص في ملف نصي لتجنب مشاكل الـ Buffer في الـ Shell
+          cat <<EOF > keystore_base64.txt
+          ${{ secrets.KEYSTORE_BASE64 }}
+          EOF
+          
+          # 2. فك التشفير من ملف إلى ملف (أضمن وسيلة لسلامة البيانات الثنائية)
+          base64 --decode keystore_base64.txt > app/nasa_new.jks
+          
+          # 3. تنظيف الملفات المؤقتة
+          rm keystore_base64.txt
 
-      # خطوة فحص الملف (ستظهر في اللوج إذا كان حجمه منطقياً)
-      - name: Verify Keystore Integrity
+      # فحص سلامة الملف وحجمه (سيظهر في السجلات للتأكد)
+      - name: Verify Keystore File
         run: |
-          ls -lh app/nasa_new.jks
-          file app/nasa_new.jks
+          if [ -s app/nasa_new.jks ]; then
+            echo "✅ Keystore file created successfully."
+            ls -lh app/nasa_new.jks
+            file app/nasa_new.jks
+          else
+            echo "❌ Failed to create Keystore file."
+            exit 1
+          fi
 
       - name: Make Gradlew Executable
         run: chmod +x gradlew
 
-      # بناء نسخة الـ Release
+      # بناء نسخة الـ Release الموقعة
       - name: Build Signed Release APK
         run: ./gradlew assembleRelease
         env:
@@ -47,6 +62,7 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
+      # رفع الملف الناتج
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
