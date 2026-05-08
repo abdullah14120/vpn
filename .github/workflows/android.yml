@@ -25,16 +25,15 @@ jobs:
       - name: Generate Gradle Wrapper
         run: gradle wrapper --gradle-version 8.2
 
-      # --- فك التشفير بالطريقة الاحترافية (تجنب تلف الملف) ---
-      - name: Decode Keystore
+      # --- الخطوة الجديدة: فك تشفير الملف ووضعه داخل مجلد app ---
+      - name: Prepare Keystore File
         run: |
+          # سيقوم GitHub بأخذ النص من Secrets وتحويله لملف حقيقي داخل المجلد الصحيح
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode --ignore-garbage > app/nasa_new.jks
 
-      # خطوة فحص الملف (ستظهر في اللوج إذا كان حجمه منطقياً)
-      - name: Verify Keystore Integrity
-        run: |
-          ls -lh app/nasa_new.jks
-          file app/nasa_new.jks
+      # فحص وجود الملف وحجمه للتأكد من نجاح العملية
+      - name: Verify Keystore Location
+        run: ls -lh app/nasa_new.jks
 
       - name: Make Gradlew Executable
         run: chmod +x gradlew
