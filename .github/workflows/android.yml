@@ -21,24 +21,46 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # توليد الـ Wrapper لضمان وجود المحرك الصحيح
+      # توليد الـ Wrapper لضمان استقرار الإصدار
       - name: Generate Gradle Wrapper
         run: gradle wrapper --gradle-version 8.2
 
-      # --- الخطوة الجديدة: فك تشفير الملف ووضعه داخل مجلد app ---
-      - name: Prepare Keystore File
+      # --- الحل الجذري: استخدام بايثون لضمان فك التشفير بدون تلف ---
+      - name: Prepare Keystore (Secure Python Method)
+        shell: python
         run: |
-          # سيقوم GitHub بأخذ النص من Secrets وتحويله لملف حقيقي داخل المجلد الصحيح
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode --ignore-garbage > app/nasa_new.jks
+          import base64
+          import os
 
-      # فحص وجود الملف وحجمه للتأكد من نجاح العملية
-      - name: Verify Keystore Location
-        run: ls -lh app/nasa_new.jks
+          # جلب النص من GitHub Secrets
+          encoded_keystore = """${{ secrets.KEYSTORE_BASE64 }}"""
+          
+          try:
+              # فك التشفير وتحويله إلى بايتات خام
+              decoded_data = base64.b64decode(encoded_keystore.strip())
+              
+              # التأكد من وجود مجلد app
+              if not os.path.exists("app"):
+                  os.makedirs("app")
+                  
+              # كتابة الملف الثنائي مباشرة
+              with open("app/nasa_new.jks", "wb") as f:
+                  f.write(decoded_data)
+              print("✅ Keystore file created successfully without corruption.")
+          except Exception as e:
+              print(f"❌ Error decoding keystore: {str(e)}")
+              exit(1)
+
+      - name: Verify Keystore Integrity
+        run: |
+          ls -lh app/nasa_new.jks
+          # التأكد أن الملف ليس فارغاً
+          if [ ! -s app/nasa_new.jks ]; then echo "File is empty!"; exit 1; fi
 
       - name: Make Gradlew Executable
         run: chmod +x gradlew
 
-      # بناء نسخة الـ Release
+      # بناء نسخة الـ Release الموقعة
       - name: Build Signed Release APK
         run: ./gradlew assembleRelease
         env:
